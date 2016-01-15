@@ -8,7 +8,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.Unpooled
 import io.netty.channel.ChannelHandlerContext
-import io.netty.channel.SimpleChannelInboundHandler
+import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.util.concurrent.DefaultPromise
 import io.netty.util.concurrent.Future
 import io.netty.util.concurrent.Promise
@@ -21,11 +21,11 @@ class ProtocolHandler(
     val password: String,
     val database: String,
     val connectPromise: Promise<Connection>
-): SimpleChannelInboundHandler<ByteBuf>(), Connection {
+): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
     private var lastException: Exception? = null
     private var queryPromiseRef = AtomicReference<Promise<QueryResult>>(null)
-    private var preparePromiseRef = AtomicReference<Promise<Statement>>(null)
+    private var prepareCallback: ((Statement?, Throwable?) -> Unit)? = null
 
     private var hasHandshake = false
     private var insideQuery = false
@@ -53,6 +53,9 @@ class ProtocolHandler(
     /** The id of the statement we are preparing. */
     private var prepareId = 0
 
+    /** The query of the statement we are preparing. */
+    private var prepareString = ""
+
     /** The column count of a query result has been read. */
     private var hasReadColumnCount = false
 
@@ -60,13 +63,22 @@ class ProtocolHandler(
     private var processingRows = false
 
     /** The result of the current query that is being built. */
-    private var result = ArrayList<Row>()
+    private val result = ArrayList<Row>()
 
     /** The server capability bitmap we received. */
     private var serverCaps = 0
 
     /** The buffer we use to accumulate partial packet data. */
     private var accumulator: ByteBuf? = null
+
+    /** The time the current query started, or 0 if not querying. */
+    private var queryStart = 0L
+
+    /** The time at which the last query ended. */
+    private var queryEnd = System.nanoTime()
+
+    /** Contains cached prepared statements. */
+    private val statementCache = HashMap<String, Statement>()
 
     private var queryPromise: Promise<QueryResult>?
         get() = queryPromiseRef.get()
@@ -76,41 +88,70 @@ class ProtocolHandler(
             }
         }
 
-    private var preparePromise: Promise<Statement>?
-        get() = preparePromiseRef.get()
-        set(v) {
-            if(!preparePromiseRef.compareAndSet(null, v)) {
-                throw SqlException("Connection still running prepare")
-            }
-        }
+    /*
+     * Connection interface implementation.
+     */
 
-    override fun prepare(query: String): Future<Statement> {
-        assertReadyForQuery()
-        val promise = DefaultPromise<Statement>(currentContext!!.executor())
-        preparePromise = promise
-        currentContext!!.writeAndFlush(writePrepareStatement(query))
-        insidePrepare = true
-        return promise
-    }
+    override val busyTime: Long
+        get() = if(queryStart > 0) System.nanoTime() - queryStart else 0
 
-    override fun query(statement: Statement, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult> {
-        assertReadyForQuery()
-        requestedTypes = targetTypes
+    override val idleTime: Long
+        get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
+
+    override fun query(query: String, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult> {
         val promise = DefaultPromise<QueryResult>(currentContext!!.executor())
         queryPromise = promise
-        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values))
-        insideQuery = true
+
+        // Check if the statement was already in cache.
+        val statement = statementCache[query]
+        if(statement === null) {
+            // If not, we prepare it first.
+            prepare(query) { s, t ->
+                if(s == null) {
+                    failQuery(t)
+                } else {
+                    query(s, values, targetTypes)
+                }
+            }
+        } else {
+            query(statement, values, targetTypes)
+        }
+
         return promise
     }
 
     override fun disconnect() {
         if(hasHandshake) {
-            failQuery(SqlException("Connection is being closed"))
+            val exception = SqlException("Connection is being closed")
+            failPrepare(exception)
+            failQuery(exception)
             clearState()
             currentContext?.writeAndFlush(writeQuit())?.then {
                 currentContext!!.close()
             }
+
+            hasHandshake = false
         }
+    }
+
+    /** Prepares a statement in the database. This needs to be done once for each statement. */
+    private fun prepare(query: String, f: (Statement?, Throwable?) -> Unit) {
+        assertReadyForQuery()
+
+        prepareString = query
+        prepareCallback = f
+        currentContext!!.writeAndFlush(writePrepareStatement(query))
+        insidePrepare = true
+    }
+
+    /** Performs a query with a prepared statement. */
+    private fun query(statement: Statement, values: List<Any>, targetTypes: List<Class<*>>?) {
+        assertReadyForQuery()
+
+        queryStart = System.nanoTime()
+        requestedTypes = targetTypes
+        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values))
+        insideQuery = true
     }
 
     /**
@@ -121,7 +162,6 @@ class ProtocolHandler(
         version, connection, capabilities, charSet, statusFlags, authSecret, authMethod ->
 
         // Reply with the authentication.
-        println("Received handshake")
         serverCaps = capabilities
         currentContext!!.writeAndFlush(writeAuthentication(
             maxPacketSize = 0x00ffffff,
@@ -149,10 +189,7 @@ class ProtocolHandler(
      * This can happen in any context.
      */
     private fun onError(packet: ByteBuf) = readError(packet, serverCaps) {
-        errorCode, sqlState, message ->
-
-        println("Received error: $message")
-        onException(SqlException(message))
+        errorCode, sqlState, message -> onException(SqlException(message))
     }
 
     private fun onException(exception: Exception) {
@@ -296,43 +333,45 @@ class ProtocolHandler(
 
 
 
-
-    private fun clearPreparePromise() = preparePromiseRef.getAndSet(null)
-
     /** Fails a prepare-command and clears state. */
     private fun failPrepare(cause: Throwable?) {
         clearState()
-        clearPreparePromise()?.tryFailure(cause)
+        prepareCallback?.invoke(null, cause)
+        prepareCallback = null
     }
 
     /** Finishes a prepare-command with buffered data and clears state. */
     private fun succeedPrepare() {
-        val columns = totalColumnCount
-        val params = totalParamCount
-        val id = prepareId
+        val statement = Statement(prepareId, totalColumnCount, totalParamCount)
+        statementCache[prepareString] = statement
 
         clearState()
-        clearPreparePromise()?.setSuccess(Statement(id, columns, params))
+        prepareCallback?.invoke(statement, null)
+        prepareCallback = null
     }
 
     private fun clearQueryPromise() = queryPromiseRef.getAndSet(null)
 
     /** Fails a query-command and clears state. */
     private fun failQuery(cause: Throwable?) {
+        queryStart = 0
+        queryEnd = System.nanoTime()
         clearState()
         clearQueryPromise()?.tryFailure(cause)
     }
 
     /** Finishes a query-command with buffered results and clears state. */
     private fun succeedQuery(affectedRows: Long, lastInsertId: Long, message: String) {
-        println("Finished query with no results")
         val queryResult = if(totalColumnCount > 0) {
             val names = Array(totalColumnCount) { columnNames[it] }
             val values = Array(result.size) { result[it] }
             ResultSet(values, names)
         } else null
 
-        val result = QueryResult(affectedRows, lastInsertId, message, queryResult)
+        val result = QueryResult(affectedRows, lastInsertId, message, System.nanoTime() - queryStart, queryResult)
+
+        queryStart = 0L
+        queryEnd = System.nanoTime()
         clearState()
         clearQueryPromise()?.setSuccess(result)
     }
@@ -342,32 +381,37 @@ class ProtocolHandler(
         if(insideQuery || insidePrepare) throw SqlException("Connection still running query")
     }
 
-
-
-
-
-
-
-    override fun channelRead0(context: ChannelHandlerContext, source: ByteBuf) {
+    /** Entry point of incoming traffic; handles reading packets and fragmentation. */
+    override fun channelRead(context: ChannelHandlerContext, source: Any) {
         currentContext = context
-        val packet = if(accumulator == null) {
-            source
-        } else {
-            Unpooled.wrappedBuffer(accumulator, source)
-        }
 
-        // Decode packets until the buffer doesn't contain any more full ones.
-        while(readPacket(packet)) {}
+        if(source is ByteBuf) {
+            // If we had leftover data it is added to the beginning of the packet.
+            val packet = if(accumulator == null) {
+                source
+            } else {
+                Unpooled.wrappedBuffer(accumulator, source)
+            }
 
-        // If there is a partial packet left, we save it until more data is received.
-        if(packet.readableBytes() > 0) {
-            accumulator = Unpooled.buffer(packet.readableBytes())
-            accumulator!!.writeBytes(packet)
-        } else {
-            accumulator = null
+            // Decode packets until the buffer doesn't contain any more full ones.
+            while(readPacket(packet)) {}
+
+            // If there is a partial packet left, we save it until more data is received.
+            if(packet.readableBytes() > 0) {
+                // This will copy a few bytes, but doing so is better than
+                // creating a chain of wrapped buffers holding onto native memory.
+                accumulator = Unpooled.buffer(packet.readableBytes())
+                accumulator!!.writeBytes(packet)
+            } else {
+                accumulator = null
+            }
+
+            // Deallocate the buffer; for wrapped buffers this releases the contained buffers as well.
+            packet.release()
         }
     }
 
+    /** Tries to read a single packet and processes it. */
     private fun readPacket(source: ByteBuf): Boolean {
         if(source.readableBytes() <= 4) return false
         source.markReaderIndex()
@@ -395,6 +439,7 @@ class ProtocolHandler(
         return true
     }
 
+    /** Handles received packets in the connection stage. */
     private fun handleHandshake(type: Byte, source: ByteBuf) {
         when(type) {
             ResultMarker.error -> onError(source)
@@ -403,6 +448,7 @@ class ProtocolHandler(
         }
     }
 
+    /** Handles received packets in the command stage. */
     private fun handleResponse(type: Byte, source: ByteBuf) {
         when(type) {
             ResultMarker.error -> onError(source)
@@ -435,6 +481,7 @@ class ProtocolHandler(
         }
     }
 
+    /** Handles partial data received when querying or creating statements. */
     private fun handleQueryResponse(source: ByteBuf) {
         if(processingParams && totalParamCount != processedParamCount) {
             onColumnDefinition(processedParamCount, source)
@@ -469,6 +516,8 @@ class ProtocolHandler(
         hasReadColumnCount = false
         processingRows = false
         requestedTypes = null
+        prepareId = 0
+        prepareString = ""
         result.clear()
     }
 }
