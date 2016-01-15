@@ -15,6 +15,9 @@ import io.netty.util.concurrent.Promise
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 
+/** Contains information about a cached prepared statement. */
+class Statement(val statementId: Int, val columnCount: Int, val paramCount: Int)
+
 /** Handles decoding packets sent from MySQL. */
 class ProtocolHandler(
     val user: String,
@@ -91,6 +94,12 @@ class ProtocolHandler(
     /*
      * Connection interface implementation.
      */
+
+    override val connected: Boolean
+        get() = hasHandshake
+
+    override val busy: Boolean
+        get() = queryStart > 0
 
     override val busyTime: Long
         get() = if(queryStart > 0) System.nanoTime() - queryStart else 0
