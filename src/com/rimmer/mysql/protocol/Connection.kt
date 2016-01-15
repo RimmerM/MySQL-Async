@@ -25,16 +25,21 @@ interface Row: Sequence<Any?> {
 }
 
 class ResultSet(val data: Array<Row>, val columnNames: Array<String>)
-class QueryResult(val affectedRows: Long, val lastInsert: Long, val status: String, val result: ResultSet?)
+class QueryResult(val affectedRows: Long, val lastInsert: Long, val status: String, val elapsed: Long, val result: ResultSet?)
 
 class SqlException(cause: String): Exception(cause)
 
 class Statement(val statementId: Int, val columnCount: Int, val paramCount: Int)
 
 interface Connection {
-    fun prepare(query: String): Future<Statement>
-    fun query(statement: Statement, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult>
+    fun query(query: String, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult>
     fun disconnect()
+
+    /** The amount of time this connection has been querying since the query start. If idle, this returns 0. */
+    val busyTime: Long
+
+    /** The amount of time this connection has been idle since the last action. */
+    val idleTime: Long
 }
 
 fun connect(group: EventLoopGroup, host: String, port: Int, user: String, password: String, database: String): Future<Connection> {
