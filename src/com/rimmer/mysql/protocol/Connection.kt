@@ -92,7 +92,9 @@ class SqlException(cause: String): Exception(cause)
 
 inline infix fun <T> Future<T>.then(crossinline f: (T) -> Unit) {
     addListener(GenericFutureListener<Future<T>> { future ->
-        f(future.get())
+        if(future.isSuccess) {
+            f(future.get())
+        }
     })
 }
 

@@ -7,10 +7,12 @@ import com.rimmer.mysql.protocol.encoder.*
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.Unpooled
+import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.util.concurrent.DefaultPromise
 import io.netty.util.concurrent.Future
+import io.netty.util.concurrent.GlobalEventExecutor
 import io.netty.util.concurrent.Promise
 import java.util.*
 import java.util.concurrent.atomic.AtomicReference
@@ -108,7 +110,7 @@ class ProtocolHandler(
         get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
 
     override fun query(query: String, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult> {
-        val promise = DefaultPromise<QueryResult>(currentContext!!.executor())
+        val promise = DefaultPromise<QueryResult>(GlobalEventExecutor.INSTANCE)
         queryPromise = promise
 
         // Check if the statement was already in cache.
@@ -149,7 +151,7 @@ class ProtocolHandler(
 
         prepareString = query
         prepareCallback = f
-        currentContext!!.writeAndFlush(writePrepareStatement(query))
+        currentContext!!.writeAndFlush(writePrepareStatement(query), currentContext!!.voidPromise())
         insidePrepare = true
     }
 
@@ -159,7 +161,7 @@ class ProtocolHandler(
 
         queryStart = System.nanoTime()
         requestedTypes = targetTypes
-        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values))
+        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values), currentContext!!.voidPromise())
         insideQuery = true
     }
 
@@ -179,7 +181,7 @@ class ProtocolHandler(
             password = password,
             seed = authSecret,
             database = database
-        ))
+        ), currentContext!!.voidPromise())
     }
 
     /**
@@ -190,7 +192,7 @@ class ProtocolHandler(
         affectedRows, lastInsertId, serverStatus, warnings, message ->
 
         hasHandshake = true
-        connectPromise.setSuccess(this)
+        connectPromise.trySuccess(this)
     }
 
     /**
@@ -382,7 +384,7 @@ class ProtocolHandler(
         queryStart = 0L
         queryEnd = System.nanoTime()
         clearState()
-        clearQueryPromise()?.setSuccess(result)
+        clearQueryPromise()?.trySuccess(result)
     }
 
     /** Makes sure the connection isn't busy. */
