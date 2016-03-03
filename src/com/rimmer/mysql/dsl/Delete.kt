@@ -3,7 +3,7 @@ package com.rimmer.mysql.dsl
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 
-class DeleteQuery(val table: Table, val predicate: Op<Boolean>? = null, val isIgnore: Boolean = false): Query {
+class Delete(val table: Table, val predicate: Op<Boolean>? = null, val isIgnore: Boolean = false): Query {
     override fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
 

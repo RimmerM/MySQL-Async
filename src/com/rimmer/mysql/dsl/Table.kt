@@ -23,7 +23,7 @@ class Slice(override val source: ColumnSet, override val fields: List<Expression
 
 open class Table(name: String? = null): ColumnSet {
     val tableName = name ?: javaClass.simpleName.removeSuffix("Table")
-    val quotedName = "`$name`"
+    val quotedName = "`$tableName`"
 
     override val columns = ArrayList<Column<*>>()
 

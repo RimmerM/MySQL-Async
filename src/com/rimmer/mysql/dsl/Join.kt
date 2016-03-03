@@ -44,7 +44,7 @@ class Join(val table: Table) : ColumnSet {
     }
 
     override fun format(builder: QueryBuilder) {
-        builder.append(table.name)
+        builder.append(table.tableName)
         for(p in parts) {
             builder.append(p.type.name)
             builder.append(" JOIN ")

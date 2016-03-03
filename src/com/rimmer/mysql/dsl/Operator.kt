@@ -8,12 +8,6 @@ class LiteralOp<T: Any>(val value: T): TypedExpression<T>(value.javaClass, false
     }
 }
 
-infix fun Op<Boolean>.and(op: TypedExpression<Boolean>) =
-    if(op is LiteralOp<Boolean> && op.value == true) this else AndOp(this, op)
-
-infix fun Op<Boolean>.or(op: TypedExpression<Boolean>) =
-    if(op is LiteralOp<Boolean> && op.value == false) this else OrOp(this, op)
-
 class AndOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>): Op<Boolean>(lhs.type, lhs.nullable) {
     override fun format(builder: QueryBuilder) {
         if(lhs is OrOp) {
