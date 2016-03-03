@@ -5,7 +5,7 @@ import java.util.*
 
 abstract class Function<T>(type: Class<T>): TypedExpression<T>(type, false)
 
-class Count(val pivot: Expression<*>, val distinct: Boolean = false): Function<Long>(Long::class.java) {
+class Count(val pivot: Expression, val distinct: Boolean = false): Function<Long>(Long::class.java) {
     override fun format(builder: QueryBuilder) {
         builder.append("COUNT(")
         if(distinct) {
@@ -16,7 +16,7 @@ class Count(val pivot: Expression<*>, val distinct: Boolean = false): Function<L
     }
 }
 
-class Date(val pivot: Expression<*>): Function<DateTime>(DateTime::class.java) {
+class Date(val pivot: Expression): Function<DateTime>(DateTime::class.java) {
     override fun format(builder: QueryBuilder) {
         builder.append("DATE(")
         pivot.format(builder)
@@ -24,7 +24,7 @@ class Date(val pivot: Expression<*>): Function<DateTime>(DateTime::class.java) {
     }
 }
 
-class Month(val pivot: Expression<*>): Function<DateTime>(DateTime::class.java) {
+class Month(val pivot: Expression): Function<DateTime>(DateTime::class.java) {
     override fun format(builder: QueryBuilder) {
         builder.append("MONTH(")
         pivot.format(builder)
@@ -32,7 +32,7 @@ class Month(val pivot: Expression<*>): Function<DateTime>(DateTime::class.java) 
     }
 }
 
-class Min<T>(val pivot: Expression<T>, type: Class<T>): Function<T>(type) {
+class Min<T>(val pivot: Expression, type: Class<T>): Function<T>(type) {
     override fun format(builder: QueryBuilder) {
         builder.append("MIN(")
         pivot.format(builder)
@@ -40,7 +40,7 @@ class Min<T>(val pivot: Expression<T>, type: Class<T>): Function<T>(type) {
     }
 }
 
-class Max<T>(val pivot: Expression<T>, type: Class<T>): Function<T>(type) {
+class Max<T>(val pivot: Expression, type: Class<T>): Function<T>(type) {
     override fun format(builder: QueryBuilder) {
         builder.append("MAX(")
         pivot.format(builder)
@@ -48,7 +48,7 @@ class Max<T>(val pivot: Expression<T>, type: Class<T>): Function<T>(type) {
     }
 }
 
-class Sum<T>(val pivot: Expression<T>, type: Class<T>): Function<T>(type) {
+class Sum<T>(val pivot: Expression, type: Class<T>): Function<T>(type) {
     override fun format(builder: QueryBuilder) {
         builder.append("SUM(")
         pivot.format(builder)
@@ -56,7 +56,7 @@ class Sum<T>(val pivot: Expression<T>, type: Class<T>): Function<T>(type) {
     }
 }
 
-class Coalesce<T: Any>(val pivot: Expression<T?>, val alternate: TypedExpression<out T>, type: Class<T>): Function<T>(type) {
+class Coalesce<T: Any>(val pivot: Expression, val alternate: TypedExpression<out T>, type: Class<T>): Function<T>(type) {
     override fun format(builder: QueryBuilder) {
         builder.append("COALESCE(")
         pivot.format(builder)
@@ -66,7 +66,7 @@ class Coalesce<T: Any>(val pivot: Expression<T?>, val alternate: TypedExpression
     }
 }
 
-class Substring(val pivot: Expression<*>, val start: Expression<Int>, val length: Expression<Int>): Function<String>(String::class.java) {
+class Substring(val pivot: Expression, val start: TypedExpression<Int>, val length: TypedExpression<Int>): Function<String>(String::class.java) {
     override fun format(builder: QueryBuilder) {
         builder.append("SUBSTRING(")
         pivot.format(builder)
@@ -77,7 +77,7 @@ class Substring(val pivot: Expression<*>, val start: Expression<Int>, val length
     }
 }
 
-class Trim(val pivot: Expression<*>): Function<String>(String::class.java) {
+class Trim(val pivot: Expression): Function<String>(String::class.java) {
     override fun format(builder: QueryBuilder) {
         builder.append("TRIM(")
         pivot.format(builder)
@@ -85,7 +85,7 @@ class Trim(val pivot: Expression<*>): Function<String>(String::class.java) {
     }
 }
 
-class Distinct<T>(val pivot: Expression<*>, type: Class<T>): Function<T>(type) {
+class Distinct<T>(val pivot: Expression, type: Class<T>): Function<T>(type) {
     override fun format(builder: QueryBuilder) {
         builder.append("DISTINCT(")
         pivot.format(builder)
@@ -93,9 +93,9 @@ class Distinct<T>(val pivot: Expression<*>, type: Class<T>): Function<T>(type) {
     }
 }
 
-class Case<T>(val pivot: Expression<*>? = null): Expression<T>() {
-    val cases = ArrayList<Pair<Expression<Boolean>, Expression<T>>>()
-    var otherwise: Expression<T>? = null
+class Case<T>(val pivot: Expression? = null): Expression() {
+    val cases = ArrayList<Pair<TypedExpression<Boolean>, Expression>>()
+    var otherwise: Expression? = null
 
     override fun format(builder: QueryBuilder) {
         if(otherwise == null) throw IllegalArgumentException("SQL when expressions must have a base case")

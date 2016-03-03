@@ -1,20 +1,20 @@
 package com.rimmer.mysql.dsl
 
-abstract class Op<T>: Expression<T>()
+abstract class Op<T>(type: Class<T>, nullable: Boolean): TypedExpression<T>(type, nullable)
 
-class LiteralOp<T>(val value: Any): TypedExpression<T>(value.javaClass, false) {
+class LiteralOp<T: Any>(val value: T): TypedExpression<T>(value.javaClass, false) {
     override fun format(builder: QueryBuilder) {
         builder.argument(value)
     }
 }
 
-infix fun Op<Boolean>.and(op: Expression<Boolean>) =
+infix fun Op<Boolean>.and(op: TypedExpression<Boolean>) =
     if(op is LiteralOp<Boolean> && op.value == true) this else AndOp(this, op)
 
-infix fun Op<Boolean>.or(op: Expression<Boolean>) =
+infix fun Op<Boolean>.or(op: TypedExpression<Boolean>) =
     if(op is LiteralOp<Boolean> && op.value == false) this else OrOp(this, op)
 
-class AndOp(val lhs: Expression<Boolean>, val rhs: Expression<Boolean>): Op<Boolean>() {
+class AndOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>): Op<Boolean>(lhs.type, lhs.nullable) {
     override fun format(builder: QueryBuilder) {
         if(lhs is OrOp) {
             builder.append('(')
@@ -36,7 +36,7 @@ class AndOp(val lhs: Expression<Boolean>, val rhs: Expression<Boolean>): Op<Bool
     }
 }
 
-class OrOp(val lhs: Expression<Boolean>, val rhs: Expression<Boolean>): Op<Boolean>() {
+class OrOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>): Op<Boolean>(lhs.type, lhs.nullable) {
     override fun format(builder: QueryBuilder) {
         builder.append('(')
         lhs.format(builder)
@@ -46,7 +46,7 @@ class OrOp(val lhs: Expression<Boolean>, val rhs: Expression<Boolean>): Op<Boole
     }
 }
 
-class exists(val query: Select): Op<Boolean>() {
+class exists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("EXISTS (")
         query.format(builder)
@@ -54,7 +54,7 @@ class exists(val query: Select): Op<Boolean>() {
     }
 }
 
-class notExists(val query: Select): Op<Boolean>() {
+class notExists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("NOT EXISTS (")
         query.format(builder)
@@ -62,42 +62,46 @@ class notExists(val query: Select): Op<Boolean>() {
     }
 }
 
-class IsNullOp(val lhs: Expression<Boolean>): Op<Boolean>() {
+class IsNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append("IS NULL")
     }
 }
 
-class IsNotNullOp(val lhs: Expression<Boolean>): Op<Boolean>() {
+class IsNotNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append("IS NOT NULL")
     }
 }
 
-class InListOp<T: Any>(val pivot: Expression<*>, val list: List<T>, val inList: Boolean = true): Op<Boolean>() {
+class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
-        when(list.size) {
-            0 -> builder.append(if(inList) " FALSE" else " TRUE")
-            1 -> {
-                pivot.format(builder)
-                builder.append(if(inList) " = " else " != ")
-                builder.argument(list.first())
-            }
-            else -> {
+        val iterator = list.iterator()
+        val hasFirst = iterator.hasNext()
+        if(hasFirst) {
+            val first = iterator.next()
+            val hasSecond = iterator.hasNext()
+            if(hasSecond) {
                 pivot.format(builder)
                 builder.append(if(inList) " IN (" else " NOT IN (")
                 list.sepBy(builder.string, ",") {
                     builder.argument(it)
                 }
                 builder.append(')')
+            } else {
+                pivot.format(builder)
+                builder.append(if(inList) " = " else " != ")
+                builder.argument(first)
             }
+        } else {
+            builder.append(if(inList) " FALSE" else " TRUE")
         }
     }
 }
 
-class Between(val lhs: Expression<Boolean>, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>() {
+class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append(" BETWEEN ")
@@ -107,7 +111,7 @@ class Between(val lhs: Expression<Boolean>, val from: LiteralOp<*>, val to: Lite
     }
 }
 
-open class CompareOp(val lhs: Expression<*>, val rhs: Expression<*>, val op: String): Op<Boolean>() {
+open class CompareOp(val lhs: Expression, val rhs: Expression, val op: String): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         if(lhs is OrOp) {
             builder.append('(')
@@ -131,18 +135,18 @@ open class CompareOp(val lhs: Expression<*>, val rhs: Expression<*>, val op: Str
     }
 }
 
-class EqOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "=")
-class NeqOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "<>")
-class LessOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "<")
-class LessEqOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "<=")
-class GreaterOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, ">")
-class GreaterEqOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, ">=")
-class LikeOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "LIKE")
-class NotLikeOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "NOT LIKE")
-class RegexOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "REGEXP")
-class NotRegexOp(lhs: Expression<*>, rhs: Expression<*>): CompareOp(lhs, rhs, "NOT REGEXP")
+class EqOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "=")
+class NeqOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "<>")
+class LessOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "<")
+class LessEqOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "<=")
+class GreaterOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, ">")
+class GreaterEqOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, ">=")
+class LikeOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "LIKE")
+class NotLikeOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "NOT LIKE")
+class RegexOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "REGEXP")
+class NotRegexOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "NOT REGEXP")
 
-class AddOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class<*>): TypedExpression<T>(type, false) {
+class AddOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append('+')
@@ -150,7 +154,7 @@ class AddOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class
     }
 }
 
-class SubOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class<*>): TypedExpression<T>(type, false) {
+class SubOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append('-')
@@ -158,7 +162,7 @@ class SubOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class
     }
 }
 
-class MulOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class<*>): TypedExpression<T>(type, false) {
+class MulOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
         builder.append('(')
         lhs.format(builder)
@@ -168,7 +172,7 @@ class MulOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class
     }
 }
 
-class DivOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class<*>): TypedExpression<T>(type, false) {
+class DivOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
         builder.append('(')
         lhs.format(builder)
@@ -178,7 +182,7 @@ class DivOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class
     }
 }
 
-class BitAndOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class<*>): TypedExpression<T>(type, false) {
+class BitAndOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
         builder.append('(')
         lhs.format(builder)
@@ -188,7 +192,7 @@ class BitAndOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Cl
     }
 }
 
-class BitOrOp<T, U: T>(val lhs: Expression<T>, val rhs: Expression<U>, type: Class<*>): TypedExpression<T>(type, false) {
+class BitOrOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
         builder.append('(')
         lhs.format(builder)

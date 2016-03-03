@@ -1,15 +1,10 @@
 package com.rimmer.mysql.dsl
 
-import com.rimmer.mysql.protocol.Connection
-import java.sql.ResultSet
-import java.sql.Statement
-import java.util.*
-
-abstract class Expression<out T> {
+abstract class Expression {
     abstract fun format(builder: QueryBuilder)
 
     override fun equals(other: Any?): Boolean {
-        return (other as? Expression<*>)?.toString() == toString()
+        return (other as? Expression)?.toString() == toString()
     }
 
     override fun hashCode(): Int {
@@ -23,4 +18,4 @@ abstract class Expression<out T> {
     }
 }
 
-abstract class TypedExpression<T>(val type: Class<*>, val nullable: Boolean) : Expression<T>()
+abstract class TypedExpression<T>(val type: Class<T>, val nullable: Boolean) : Expression()
