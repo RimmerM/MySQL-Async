@@ -4,10 +4,6 @@ import com.rimmer.mysql.pool.ConnectionPool
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 
-infix fun <T, U, E> ((T?, E?) -> U).bind(f: (U?, E?) -> Unit) {
-
-}
-
 interface Query {
     /** Runs this query on the provided connection. */
     fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit)
@@ -18,9 +14,6 @@ interface Query {
             if(c == null) f(null, e)
             else run(c, f)
         }
-
-
-        c.get(bind(f))
     }
 }
 
@@ -70,3 +63,37 @@ infix fun Expression.neq(rhs: Expression) = NeqOp(this, rhs)
 infix fun Op<Boolean>.and(op: TypedExpression<Boolean>) = if(op is LiteralOp<Boolean> && op.value == true) this else AndOp(this, op)
 infix fun Op<Boolean>.or(op: TypedExpression<Boolean>) = if(op is LiteralOp<Boolean> && op.value == false) this else OrOp(this, op)
 
+infix fun <T> TypedExpression<T>.less(rhs: Expression) = LessOp(this, rhs)
+infix fun <T: Any> TypedExpression<T>.less(rhs: T) = LessOp(this, literal(rhs))
+
+infix fun <T> TypedExpression<T>.lessEq(rhs: Expression) = LessEqOp(this, rhs)
+infix fun <T: Any> TypedExpression<T>.lessEq(rhs: T) = LessEqOp(this, literal(rhs))
+
+infix fun <T> TypedExpression<T>.greater(rhs: Expression) = GreaterOp(this, rhs)
+infix fun <T: Any> TypedExpression<T>.greater(rhs: T) = GreaterOp(this, literal(rhs))
+
+infix fun <T> TypedExpression<T>.greaterEq(rhs: Expression) = GreaterEqOp(this, rhs)
+infix fun <T: Any> TypedExpression<T>.greaterEq(rhs: T) = GreaterEqOp(this, literal(rhs))
+
+operator fun <T, S: T> TypedExpression<T>.plus(rhs: TypedExpression<S>) = AddOp(this, rhs)
+operator fun <T: Any> TypedExpression<T>.plus(rhs: T) = AddOp(this, literal(rhs))
+
+operator fun <T, S: T> TypedExpression<T>.minus(rhs: TypedExpression<S>) = SubOp(this, rhs)
+operator fun <T: Any> TypedExpression<T>.minus(rhs: T) = SubOp(this, literal(rhs))
+
+operator fun <T, S: T> TypedExpression<T>.times(rhs: TypedExpression<S>) = MulOp(this, rhs)
+operator fun <T: Any> TypedExpression<T>.times(rhs: T) = MulOp(this, literal(rhs))
+
+operator fun <T, S: T> TypedExpression<T>.div(rhs: TypedExpression<S>) = DivOp(this, rhs)
+operator fun <T: Any> TypedExpression<T>.div(rhs: T) = DivOp(this, literal(rhs))
+
+infix fun <T: String?> TypedExpression<T>.like(pattern: String) = LikeOp(this, literal(pattern))
+infix fun <T: String?> TypedExpression<T>.notLike(pattern: String) = NotLikeOp(this, literal(pattern))
+
+infix fun <T: String?> TypedExpression<T>.regex(pattern: String) = RegexOp(this, literal(pattern))
+infix fun <T: String?> TypedExpression<T>.notRegex(pattern: String) = NotRegexOp(this, literal(pattern))
+
+infix fun <T: Any> Expression.inList(list: Iterable<T>) = InListOp(this, list, true)
+infix fun <T: Any> Expression.notInList(list: Iterable<T>) = InListOp(this, list, false)
+
+fun <T, S: Any> TypedExpression<T>.between(from: S, to: S) = Between(this, literal(from), literal(to))
