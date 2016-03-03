@@ -9,4 +9,3 @@ interface Query {
 }
 
 fun FieldSet.select(where: Op<Boolean>) = Select(this, where)
-
