@@ -7,15 +7,9 @@ import com.rimmer.mysql.protocol.encoder.*
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
 import io.netty.buffer.Unpooled
-import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
-import io.netty.util.concurrent.DefaultPromise
-import io.netty.util.concurrent.Future
-import io.netty.util.concurrent.GlobalEventExecutor
-import io.netty.util.concurrent.Promise
 import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 
 /** Contains information about a cached prepared statement. */
 class Statement(val statementId: Int, val columnCount: Int, val paramCount: Int)
@@ -25,11 +19,10 @@ class ProtocolHandler(
     val user: String,
     val password: String,
     val database: String,
-    val connectPromise: Promise<Connection>
+    val connectCallback: (Connection?, Throwable?) -> Unit
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
-    private var lastException: Exception? = null
-    private var queryPromiseRef = AtomicReference<Promise<QueryResult>>(null)
+    private var queryCallback: ((QueryResult?, Throwable?) -> Unit)? = null
     private var prepareCallback: ((Statement?, Throwable?) -> Unit)? = null
 
     private var hasHandshake = false
@@ -85,14 +78,6 @@ class ProtocolHandler(
     /** Contains cached prepared statements. */
     private val statementCache = HashMap<String, Statement>()
 
-    private var queryPromise: Promise<QueryResult>?
-        get() = queryPromiseRef.get()
-        set(v) {
-            if(!queryPromiseRef.compareAndSet(null, v)) {
-                throw SqlException("Connection still running query")
-            }
-        }
-
     /*
      * Connection interface implementation.
      */
@@ -109,9 +94,8 @@ class ProtocolHandler(
     override val idleTime: Long
         get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
 
-    override fun query(query: String, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult> {
-        val promise = DefaultPromise<QueryResult>(GlobalEventExecutor.INSTANCE)
-        queryPromise = promise
+    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, f: (QueryResult?, Throwable?) -> Unit) {
+        queryCallback = f
 
         // Check if the statement was already in cache.
         val statement = statementCache[query]
@@ -127,8 +111,6 @@ class ProtocolHandler(
         } else {
             query(statement, values, targetTypes)
         }
-
-        return promise
     }
 
     override fun disconnect() {
@@ -156,7 +138,7 @@ class ProtocolHandler(
     }
 
     /** Performs a query with a prepared statement. */
-    private fun query(statement: Statement, values: List<Any>, targetTypes: List<Class<*>>?) {
+    private fun query(statement: Statement, values: List<Any?>, targetTypes: List<Class<*>>?) {
         assertReadyForQuery()
 
         queryStart = System.nanoTime()
@@ -192,7 +174,7 @@ class ProtocolHandler(
         affectedRows, lastInsertId, serverStatus, warnings, message ->
 
         hasHandshake = true
-        connectPromise.trySuccess(this)
+        connectCallback(this, null)
     }
 
     /**
@@ -203,11 +185,10 @@ class ProtocolHandler(
         errorCode, sqlState, message -> onException(SqlException(message))
     }
 
-    private fun onException(exception: Exception) {
-        lastException = exception
-        connectPromise.tryFailure(exception)
-
-        if(insideQuery) {
+    private fun onException(exception: Throwable) {
+        if(!hasHandshake) {
+            connectCallback(null, exception)
+        } else if(insideQuery) {
             failQuery(exception)
         } else if(insidePrepare) {
             failPrepare(exception)
@@ -361,14 +342,12 @@ class ProtocolHandler(
         prepareCallback = null
     }
 
-    private fun clearQueryPromise() = queryPromiseRef.getAndSet(null)
-
     /** Fails a query-command and clears state. */
     private fun failQuery(cause: Throwable?) {
         queryStart = 0
         queryEnd = System.nanoTime()
         clearState()
-        clearQueryPromise()?.tryFailure(cause)
+        finishQuery(null, cause)
     }
 
     /** Finishes a query-command with buffered results and clears state. */
@@ -384,7 +363,14 @@ class ProtocolHandler(
         queryStart = 0L
         queryEnd = System.nanoTime()
         clearState()
-        clearQueryPromise()?.trySuccess(result)
+        finishQuery(result, null)
+    }
+
+    private fun finishQuery(result: QueryResult?, error: Throwable?) {
+        // The callback may change our state before returning, which is why the state needs to be final here.
+        val f = queryCallback
+        queryCallback = null
+        f?.invoke(result, error)
     }
 
     /** Makes sure the connection isn't busy. */
@@ -487,7 +473,8 @@ class ProtocolHandler(
             else -> if(insideQuery || insidePrepare) {
                 handleQueryResponse(source)
             } else {
-                onException(SqlException("Received an unknown packet type"))
+                println("Received an unknown packet type $type")
+                //onException(SqlException("Received an unknown packet type $type"))
             }
         }
     }
