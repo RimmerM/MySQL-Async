@@ -1,6 +1,6 @@
 package com.rimmer.mysql.dsl
 
-open class Column<T>(val table: Table, val name: String, type: Class<T>, nullable: Boolean = false) : TypedExpression<T>(type, nullable) {
+open class Column<T>(val table: Table, val name: String, type: Class<T>, nullable: Boolean = false) : TypedExpression<T>(type, nullable), FieldSet {
     val quotedName = "`$name`"
 
     override fun equals(other: Any?): Boolean {
@@ -20,4 +20,7 @@ open class Column<T>(val table: Table, val name: String, type: Class<T>, nullabl
     override fun format(builder: QueryBuilder) {
         builder.append(quotedName)
     }
+
+    override val fields: List<Expression> = listOf(this)
+    override val source: ColumnSet get() = table
 }

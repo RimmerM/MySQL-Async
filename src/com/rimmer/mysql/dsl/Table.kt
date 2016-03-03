@@ -21,8 +21,8 @@ interface ColumnSet: FieldSet {
 
 class Slice(override val source: ColumnSet, override val fields: List<Expression>): FieldSet
 
-open class Table(tableName: String? = null): ColumnSet {
-    val name = tableName ?: javaClass.simpleName.removeSuffix("Table")
+open class Table(name: String? = null): ColumnSet {
+    val tableName = name ?: javaClass.simpleName.removeSuffix("Table")
     val quotedName = "`$name`"
 
     override val columns = ArrayList<Column<*>>()
@@ -86,9 +86,11 @@ open class Table(tableName: String? = null): ColumnSet {
         return replaceColumn(this, newColumn)
     }
 
+    override fun toString() = tableName
+
     override fun equals(other: Any?): Boolean {
         if(other !is Table) return false
-        return other.name == name
+        return other.tableName == tableName
     }
 
     override fun format(builder: QueryBuilder) { builder.append(quotedName) }
