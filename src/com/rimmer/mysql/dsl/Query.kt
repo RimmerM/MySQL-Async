@@ -9,10 +9,13 @@ interface Query {
     fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit)
 
     /** Fetches a connection from the pool and runs this query. */
-    fun run(c: ConnectionPool, f: (QueryResult?, Throwable?) -> Unit) {
-        c.get { c, e ->
+    fun run(pool: ConnectionPool, f: (QueryResult?, Throwable?) -> Unit) {
+        pool.get { c, e ->
             if(c == null) f(null, e)
-            else run(c, f)
+            else run(c) { r, e ->
+                c.disconnect()
+                f(r, e)
+            }
         }
     }
 }
