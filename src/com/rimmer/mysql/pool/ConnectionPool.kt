@@ -27,7 +27,7 @@ class PoolConfiguration(
 /** Provides an interface for using connections from a pool. */
 interface ConnectionPool {
     /** Returns a pooled connection ready for use. */
-    fun get(): Future<Connection>
+    fun get(f: (Connection?, Throwable?) -> Unit)
 
     /** Releases a pooled connection. This is also done by Connection.disconnect() */
     fun release(connection: Connection)
@@ -36,61 +36,52 @@ interface ConnectionPool {
 /** Implements a connection pool meant for use from a single thread. */
 class SingleThreadPool(
     val config: PoolConfiguration,
-    val executor: EventExecutor,
-    val creator: () -> Future<Connection>
+    val creator: ((Connection?, Throwable?) -> Unit) -> Unit
 ): ConnectionPool {
-    private val timer = Timer("connection-pool-keepalive")
     private val idlePool = Stack<PoolConnection>()
     private val connections = ArrayList<PoolConnection>()
-    private val waiting: Queue<Promise<Connection>> = LinkedList<Promise<Connection>>()
+    private val waiting: Queue<(Connection?, Throwable?) -> Unit> = LinkedList()
     private var connectionCount = 0
 
-    init {
-        val interval = config.keepaliveInterval / 1000000L
-        timer.scheduleAtFixedRate(object: TimerTask() {
-            override fun run() = executor.execute {
-                checkConnections()
-            }
-        }, interval, interval)
-    }
-
-    override fun get(): Future<Connection> {
+    override fun get(f: (Connection?, Throwable?) -> Unit) {
         if(idlePool.empty()) {
-            val connection = DefaultPromise<Connection>(executor)
             if(connectionCount < config.maxItems) {
                 connectionCount++
-                creator().then {
-                    val pooled = PoolConnection(it, this)
-                    connections.add(pooled)
-                    connection.setSuccess(pooled)
+                creator {c, e ->
+                    if(c == null) {
+                        f(null, e)
+                    } else {
+                        val pooled = PoolConnection(c, this)
+                        connections.add(pooled)
+                        f(pooled, null)
+                    }
                 }
             } else if(waiting.size < config.maxWaiting) {
-                waiting.offer(connection)
+                waiting.offer(f)
             } else {
-                connection.setFailure(SqlException("Connection queue full"))
+                f(null, SqlException("Connection queue full"))
             }
-
-            return connection
         } else {
             val connection = idlePool.pop()
 
             // Check if the connection is busy, just in case we are currently doing an alive-test.
             if(connection.busy) {
-                return get()
+                get(f)
             } else {
-                val promise = DefaultPromise<Connection>(executor)
-                promise.setSuccess(connection)
-                return promise
+                f(connection, null)
             }
         }
     }
 
     override fun release(connection: Connection) {
         if(connection is PoolConnection) {
-            if(waiting.size > 0) {
-                waiting.poll().trySuccess(connection)
-            } else {
+            // If anyone is currently waiting for a connection, we directly call it.
+            // Otherwise we return the connection to the pool.
+            val waiter = waiting.poll()
+            if(waiter == null) {
                 idlePool.add(connection)
+            } else {
+                waiter(connection, null)
             }
         }
     }
