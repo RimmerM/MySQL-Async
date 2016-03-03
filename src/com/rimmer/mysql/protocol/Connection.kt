@@ -3,6 +3,8 @@ package com.rimmer.mysql.protocol
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.*
+import io.netty.channel.epoll.EpollEventLoopGroup
+import io.netty.channel.epoll.EpollSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.util.concurrent.*
 
@@ -15,7 +17,7 @@ interface Connection {
      * @param targetTypes The types you want the query to return. If not set, the driver decides what types to return.
      * @return A query result object.
      */
-    fun query(query: String, values: List<Any>, targetTypes: List<Class<*>>?): Future<QueryResult>
+    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, f: (QueryResult?, Throwable?) -> Unit)
 
     /** Closes this connection. */
     fun disconnect()
@@ -64,8 +66,8 @@ class QueryResult(val affectedRows: Long, val lastInsert: Long, val status: Stri
  * @param password The password for this user.
  * @param database The database to connect to.
  */
-fun connect(group: EventLoopGroup, host: String, port: Int, user: String, password: String, database: String): Future<Connection> {
-    val connection = DefaultPromise<Connection>(GlobalEventExecutor.INSTANCE)
+fun connect(group: EventLoopGroup, host: String, port: Int, user: String, password: String, database: String, f: (Connection?, Throwable?) -> Unit) {
+    val channelType = if(group is EpollEventLoopGroup) EpollSocketChannel::class.java else NioSocketChannel::class.java
 
     // Create the connection channel.
     val bootstrap = Bootstrap()
@@ -73,19 +75,15 @@ fun connect(group: EventLoopGroup, host: String, port: Int, user: String, passwo
         .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
         .group(group)
-        .channel(NioSocketChannel::class.java)
+        .channel(channelType)
         .handler(object: ChannelInitializer<Channel>() {
             override fun initChannel(channel: Channel) {
-                channel.pipeline().addLast(ProtocolHandler(user, password, database, connection))
+                channel.pipeline().addLast(ProtocolHandler(user, password, database, f))
             }
         })
 
     // Try to connect to the database.
-    bootstrap.connect(host, port) onFail {
-        connection.setFailure(it)
-    }
-
-    return connection
+    bootstrap.connect(host, port) onFail { f(null, it) }
 }
 
 class SqlException(cause: String): Exception(cause)
@@ -99,8 +97,8 @@ inline infix fun <T> Future<T>.then(crossinline f: (T) -> Unit) {
 }
 
 inline infix fun <T> Future<T>.onFail(crossinline f: (Exception) -> Unit) {
-    addListener(GenericFutureListener<Future<T>> { future ->
+    addListener { future ->
         val cause = future.cause()
         if(cause != null && cause is Exception) f(cause)
-    })
+    }
 }
