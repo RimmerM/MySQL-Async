@@ -114,3 +114,15 @@ class Case<T>(val pivot: Expression<*>? = null): Expression<T>() {
         }
     }
 }
+
+class Now: Function<DateTime>(DateTime::class.java) {
+    override fun format(builder: QueryBuilder) {
+        builder.append("NOW()")
+    }
+}
+
+class Rand: Function<Float>(Float::class.java) {
+    override fun format(builder: QueryBuilder) {
+        builder.append("RAND()")
+    }
+}
