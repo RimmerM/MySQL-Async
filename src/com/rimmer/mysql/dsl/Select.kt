@@ -89,7 +89,7 @@ class Select(val set: FieldSet, val where: Op<Boolean>?): Expression(), Query {
         return this
     }
 
-    fun orderBy(vararg column: Pair<Expression, Boolean>, ascending: Boolean): Select {
+    fun orderBy(vararg column: Pair<Expression, Boolean>): Select {
         orderBy.addAll(column)
         return this
     }
