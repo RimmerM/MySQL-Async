@@ -4,7 +4,7 @@ import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 import java.util.*
 
-class Select(val set: FieldSet, val where: Op<Boolean>?): Expression() {
+class Select(val set: FieldSet, val where: Op<Boolean>?): Expression(), Query {
     val groupedBy = ArrayList<Expression>()
     val orderBy = ArrayList<Pair<Expression, Boolean>>()
 
@@ -56,7 +56,7 @@ class Select(val set: FieldSet, val where: Op<Boolean>?): Expression() {
         }
     }
 
-    fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
         format(builder)
         builder.run(c, f)

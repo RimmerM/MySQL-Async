@@ -1,6 +1,6 @@
 package com.rimmer.mysql.dsl
 
-open class Column<T>(val table: Table, val name: String, type: Class<*>, nullable: Boolean = false) : TypedExpression<T>(type, nullable) {
+open class Column<T>(val table: Table, val name: String, type: Class<T>, nullable: Boolean = false) : TypedExpression<T>(type, nullable) {
     val quotedName = "`$name`"
     var referee: Column<*>? = null
     var defaultValue: T? = null

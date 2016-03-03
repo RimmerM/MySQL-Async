@@ -4,7 +4,7 @@ import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 import java.util.*
 
-class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boolean = false) {
+class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boolean = false): Query {
     val values = LinkedHashMap<Column<*>, Any?>()
 
     operator fun <T> set(column: Column<T>, value: T) {
@@ -14,7 +14,7 @@ class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boo
         values.put(column, value)
     }
 
-    fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
 
         builder.append("INSERT ")
@@ -42,7 +42,7 @@ class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boo
     }
 }
 
-class BatchInsert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boolean = false) {
+class BatchInsert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boolean = false): Query {
     val values = ArrayList<ArrayList<Any?>>()
     val columns = ArrayList<Column<*>>()
 
@@ -67,7 +67,7 @@ class BatchInsert(val table: Table, val isIgnore: Boolean = false, val isReplace
         batch.add(value)
     }
 
-    fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
         if(values.isEmpty()) {
             f(QueryResult(0, 0, "", 0, null), null)
             return
