@@ -7,6 +7,7 @@ import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.epoll.EpollSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
 import io.netty.util.concurrent.*
+import java.util.*
 
 /** Represents a single serial connection to the database. */
 interface Connection {
@@ -41,11 +42,22 @@ interface Connection {
 /** Contains the result data for a single row. */
 interface Row: Sequence<Any?> {
     val rowIndex: Int
-    fun get(index: Int): Any?
+    operator fun get(index: Int): Any?
 }
 
 /** Contains the result data for a single query. */
-class ResultSet(val data: Array<Row>, val columnNames: Array<String>)
+class ResultSet(val data: Array<Row>, val columnNames: Array<String>) {
+    /** Returns a list of rows, where each row contains a key -> value map. */
+    val map: List<Map<String, Any?>> get() {
+        return data.map { row ->
+            val map = HashMap<String, Any?>()
+            columnNames.forEachIndexed { i, s ->
+                map[s] = row[i]
+            }
+            map
+        }
+    }
+}
 
 /**
  * Contains the result of a query.
