@@ -30,6 +30,21 @@ fun Table.deleteAll() = Delete(this, null, false)
 inline fun <T: Table> T.select(where: T.() -> Op<Boolean>) = Select(this, where())
 inline fun <T: Table> T.delete(where: T.() -> Op<Boolean>) = Delete(this, where(), false)
 
+inline fun <T: Table> T.insert(isIgnore: Boolean = false, isReplace: Boolean = false, f: T.(Insert) -> Unit): Insert {
+    val i = Insert(this, isIgnore, isReplace)
+    f(i)
+    return i
+}
+
+inline fun <T: Table, U> T.batchInsert(list: Iterable<U>, isIgnore: Boolean = false, isReplace: Boolean = false, f: T.(BatchInsert, U) -> Unit): BatchInsert {
+    val i = BatchInsert(this, isIgnore, isReplace)
+    for(v in list) {
+        f(i, v)
+        i.addBatch()
+    }
+    return i
+}
+
 /*
  * Function helpers.
  */
