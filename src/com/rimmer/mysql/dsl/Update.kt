@@ -14,7 +14,7 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val limit: Int? =
         values.put(column, value)
     }
 
-    fun <T> set(column: Column<T>, value: Expression) {
+    operator fun <T> set(column: Column<T>, value: Expression) {
         if(values.containsKey(column)) {
             throw IllegalArgumentException("$column has already been set")
         }
