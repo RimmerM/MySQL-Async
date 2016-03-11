@@ -4,7 +4,7 @@ import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 import java.util.*
 
-class Select(val set: FieldSet, val where: Op<Boolean>?): Expression(), Query {
+class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = false): Expression(), Query {
     val groupedBy = ArrayList<Expression>()
     val orderBy = ArrayList<Pair<Expression, Boolean>>()
 
@@ -16,8 +16,12 @@ class Select(val set: FieldSet, val where: Op<Boolean>?): Expression(), Query {
     override fun format(builder: QueryBuilder) = with(builder) {
         append("SELECT ")
 
-        set.fields.sepBy(string, ", ") {
-            it.format(this)
+        if(isCount) {
+            append("COUNT(*)")
+        } else {
+            set.fields.sepBy(string, ", ") {
+                it.format(this)
+            }
         }
 
         append(" FROM ")

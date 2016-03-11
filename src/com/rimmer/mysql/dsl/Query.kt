@@ -22,6 +22,8 @@ interface Query {
 
 fun FieldSet.select(where: Op<Boolean>) = Select(this, where)
 fun FieldSet.selectAll() = Select(this, null)
+fun FieldSet.selectCount(where: Op<Boolean>) = Select(this, where, true)
+fun FieldSet.selectAllCount() = Select(this, null, true)
 
 inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null) = Update(this, where(), limit)
 
@@ -34,6 +36,8 @@ inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null, f
 fun Table.deleteAll() = Delete(this, null, false)
 
 inline fun <T: Table> T.select(where: T.() -> Op<Boolean>) = Select(this, where())
+inline fun <T: Table> T.selectCount(where: T.() -> Op<Boolean>) = Select(this, where(), true)
+
 inline fun <T: Table> T.delete(where: T.() -> Op<Boolean>) = Delete(this, where(), false)
 
 inline fun <T: Table> T.insert(isIgnore: Boolean = false, isReplace: Boolean = false, f: T.(Insert) -> Unit): Insert {
