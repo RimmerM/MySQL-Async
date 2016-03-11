@@ -25,6 +25,12 @@ fun FieldSet.selectAll() = Select(this, null)
 
 inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null) = Update(this, where(), limit)
 
+inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null, f: T.(Update) -> Unit): Update {
+    val u = Update(this, where(), limit)
+    f(u)
+    return u
+}
+
 fun Table.deleteAll() = Delete(this, null, false)
 
 inline fun <T: Table> T.select(where: T.() -> Op<Boolean>) = Select(this, where())
@@ -36,7 +42,12 @@ inline fun <T: Table> T.insert(isIgnore: Boolean = false, isReplace: Boolean = f
     return i
 }
 
-inline fun <T: Table, U> T.batchInsert(list: Iterable<U>, isIgnore: Boolean = false, isReplace: Boolean = false, f: T.(BatchInsert, U) -> Unit): BatchInsert {
+inline fun <T: Table, U> T.batchInsert(
+    list: Iterable<U>,
+    isIgnore: Boolean = false,
+    isReplace: Boolean = false,
+    f: T.(BatchInsert, U) -> Unit
+): BatchInsert {
     val i = BatchInsert(this, isIgnore, isReplace)
     for(v in list) {
         f(i, v)
