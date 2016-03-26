@@ -280,10 +280,6 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any? {
     val chronology = ISOChronology.getInstanceUTC()
     val timestamp = chronology.getDateTimeMillis(year, month, day, hour, minute, second, ms)
 
-    if(ms > 31) {
-        throw SqlException("")
-    }
-
     return if(targetType === null || targetType === DateTime::class.java) {
         DateTime(timestamp, chronology)
     } else if(targetType === Date::class.java) {
