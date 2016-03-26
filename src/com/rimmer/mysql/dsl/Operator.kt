@@ -40,7 +40,7 @@ class OrOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>)
     }
 }
 
-class Exists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
+class Exists(val query: Select): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("EXISTS (")
         query.format(builder)
@@ -48,7 +48,7 @@ class Exists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     }
 }
 
-class NotExists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
+class NotExists(val query: Select): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("NOT EXISTS (")
         query.format(builder)
@@ -56,21 +56,21 @@ class NotExists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     }
 }
 
-class IsNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.java, false) {
+class IsNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append("IS NULL")
     }
 }
 
-class IsNotNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.java, false) {
+class IsNotNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append("IS NOT NULL")
     }
 }
 
-class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(Boolean::class.java, false) {
+class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         val iterator = list.iterator()
         val hasFirst = iterator.hasNext()
@@ -95,7 +95,7 @@ class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList:
     }
 }
 
-class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>(Boolean::class.java, false) {
+class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append(" BETWEEN ")
@@ -105,7 +105,7 @@ class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>)
     }
 }
 
-open class CompareOp(val lhs: Expression, val rhs: Expression, val op: String): Op<Boolean>(Boolean::class.java, false) {
+open class CompareOp(val lhs: Expression, val rhs: Expression, val op: String): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         if(lhs is OrOp) {
             builder.append('(')

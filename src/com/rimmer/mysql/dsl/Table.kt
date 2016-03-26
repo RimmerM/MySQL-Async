@@ -28,55 +28,55 @@ open class Table(name: String? = null): ColumnSet {
     override val columns = ArrayList<Column<*>>()
 
     fun integer(name: String): Column<Int> {
-        val answer = Column(this, name, Int::class.java)
+        val answer = Column(this, name, Int::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun short(name: String): Column<Short> {
-        val answer = Column(this, name, Short::class.java)
+        val answer = Column(this, name, Short::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun char(name: String): Column<Char> {
-        val answer = Column(this, name, Char::class.java)
+        val answer = Column(this, name, Char::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun float(name: String): Column<Float> {
-        val answer = Column(this, name, Float::class.java)
+        val answer = Column(this, name, Float::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun long(name: String): Column<Long> {
-        val answer = Column(this, name, Long::class.java)
+        val answer = Column(this, name, Long::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun date(name: String): Column<DateTime> {
-        val answer = Column(this, name, DateTime::class.java)
+        val answer = Column(this, name, DateTime::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun bool(name: String): Column<Boolean> {
-        val answer = Column(this, name, Boolean::class.java)
+        val answer = Column(this, name, Boolean::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun blob(name: String): Column<ByteArray> {
-        val answer = Column(this, name, ByteArray::class.java)
+        val answer = Column(this, name, ByteArray::class.javaObjectType)
         columns.add(answer)
         return answer
     }
 
     fun text(name: String): Column<String> {
-        val answer = Column(this, name, String::class.java)
+        val answer = Column(this, name, String::class.javaObjectType)
         columns.add(answer)
         return answer
     }

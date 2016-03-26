@@ -109,9 +109,9 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when
 }
 
 fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
-    if(targetType === null || targetType === String::class.java) {
+    if(targetType === null || targetType === String::class.javaObjectType) {
         return buffer.readLengthEncodedString()
-    } else if(targetType === ByteArray::class.java) {
+    } else if(targetType === ByteArray::class.javaObjectType) {
         val length = buffer.readLengthEncoded().toInt()
         val bytes = ByteArray(length)
         buffer.readBytes(bytes)
@@ -124,28 +124,28 @@ fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
     val string = buffer.readLengthEncodedString()
 
-    if(targetType === null || targetType === Double::class.java) {
+    if(targetType === null || targetType === Double::class.javaObjectType) {
         try {
             return java.lang.Double.parseDouble(string)
         } catch(e: Throwable) {
             return 0.0
         }
-    } else if(targetType === Int::class.java || targetType === Long::class.java) {
+    } else if(targetType === Int::class.javaObjectType || targetType === Long::class.javaObjectType) {
         try {
             val v = java.lang.Long.parseLong(string)
-            return if(targetType === Int::class.java) v.toInt() else v
+            return if(targetType === Int::class.javaObjectType) v.toInt() else v
         } catch(e: Throwable) {
-            return if(targetType === Int::class.java) 0 else 0L
+            return if(targetType === Int::class.javaObjectType) 0 else 0L
         }
-    } else if(targetType === Float::class.java) {
+    } else if(targetType === Float::class.javaObjectType) {
         try {
             return java.lang.Float.parseFloat(string)
         } catch(e: Throwable) {
             return 0f
         }
-    } else if(targetType === BigDecimal::class.java) {
+    } else if(targetType === BigDecimal::class.javaObjectType) {
         return BigDecimal(string)
-    } else if(targetType === String::class.java) {
+    } else if(targetType === String::class.javaObjectType) {
         return string
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -155,11 +155,11 @@ fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any {
     val v = ByteBufUtil.swapLong(buffer.readLong())
 
-    return if(targetType === null || targetType === Long::class.java) {
+    return if(targetType === null || targetType === Long::class.javaObjectType) {
         v
-    } else if(targetType === Int::class.java) {
+    } else if(targetType === Int::class.javaObjectType) {
         v.toInt()
-    } else if(targetType === Boolean::class.java) {
+    } else if(targetType === Boolean::class.javaObjectType) {
         v != 0L
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -169,11 +169,11 @@ fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeInt(buffer: ByteBuf, targetType: Class<*>?): Any {
     val v = ByteBufUtil.swapInt(buffer.readInt())
 
-    return if(targetType === null || targetType === Int::class.java) {
+    return if(targetType === null || targetType === Int::class.javaObjectType) {
         v
-    } else if(targetType === Long::class.java) {
+    } else if(targetType === Long::class.javaObjectType) {
         v.toLong()
-    } else if(targetType === Boolean::class.java) {
+    } else if(targetType === Boolean::class.javaObjectType) {
         v != 0
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -183,13 +183,13 @@ fun decodeInt(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeShort(buffer: ByteBuf, targetType: Class<*>?): Any {
     val v = ByteBufUtil.swapShort(buffer.readShort())
 
-    return if(targetType === null || targetType === Short::class.java) {
+    return if(targetType === null || targetType === Short::class.javaObjectType) {
         v
-    } else if(targetType === Int::class.java) {
+    } else if(targetType === Int::class.javaObjectType) {
         v.toInt()
-    } else if(targetType === Long::class.java) {
+    } else if(targetType === Long::class.javaObjectType) {
         v.toLong()
-    } else if(targetType === Boolean::class.java) {
+    } else if(targetType === Boolean::class.javaObjectType) {
         v != 0.toShort()
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -199,15 +199,15 @@ fun decodeShort(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeByte(buffer: ByteBuf, targetType: Class<*>?): Any {
     val v = buffer.readByte()
 
-    return if(targetType === null || targetType === Byte::class.java) {
+    return if(targetType === null || targetType === Byte::class.javaObjectType) {
         v
-    } else if(targetType === Boolean::class.java) {
+    } else if(targetType === Boolean::class.javaObjectType) {
         v != 0.toByte()
-    } else if(targetType === Int::class.java) {
+    } else if(targetType === Int::class.javaObjectType) {
         v.toInt()
-    } else if(targetType === Long::class.java) {
+    } else if(targetType === Long::class.javaObjectType) {
         v.toLong()
-    } else if(targetType === Short::class.java) {
+    } else if(targetType === Short::class.javaObjectType) {
         v.toShort()
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -217,13 +217,13 @@ fun decodeByte(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?): Any {
     val v = java.lang.Float.intBitsToFloat(ByteBufUtil.swapInt(buffer.readInt()))
 
-    return if(targetType === null || targetType === Float::class.java) {
+    return if(targetType === null || targetType === Float::class.javaObjectType) {
         v
-    } else if(targetType === Int::class.java) {
+    } else if(targetType === Int::class.javaObjectType) {
         v.toInt()
-    } else if(targetType === Long::class.java) {
+    } else if(targetType === Long::class.javaObjectType) {
         v.toLong()
-    } else if(targetType === Double::class.java) {
+    } else if(targetType === Double::class.javaObjectType) {
         v.toDouble()
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -233,13 +233,13 @@ fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?): Any {
 fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?): Any {
     val v = java.lang.Double.longBitsToDouble(ByteBufUtil.swapLong(buffer.readLong()))
 
-    return if(targetType === null || targetType === Double::class.java) {
+    return if(targetType === null || targetType === Double::class.javaObjectType) {
         v
-    } else if(targetType === Int::class.java) {
+    } else if(targetType === Int::class.javaObjectType) {
         v.toInt()
-    } else if(targetType === Long::class.java) {
+    } else if(targetType === Long::class.javaObjectType) {
         v.toLong()
-    } else if(targetType === Float::class.java) {
+    } else if(targetType === Float::class.javaObjectType) {
         v.toFloat()
     } else {
         throw SqlException("Unknown target type $targetType")
@@ -280,11 +280,11 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any? {
     val chronology = ISOChronology.getInstanceUTC()
     val timestamp = chronology.getDateTimeMillis(year, month, day, hour, minute, second, ms)
 
-    return if(targetType === null || targetType === DateTime::class.java) {
+    return if(targetType === null || targetType === DateTime::class.javaObjectType) {
         DateTime(timestamp, chronology)
-    } else if(targetType === Date::class.java) {
+    } else if(targetType === Date::class.javaObjectType) {
         Date(timestamp)
-    } else if(targetType === Long::class.java) {
+    } else if(targetType === Long::class.javaObjectType) {
         timestamp
     } else {
         throw SqlException("Unknown target type $targetType")
