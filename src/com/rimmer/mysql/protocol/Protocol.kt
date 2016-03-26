@@ -187,14 +187,13 @@ class ProtocolHandler(
 
     private fun onException(exception: Throwable) {
         if(!hasHandshake) {
+            clearState()
             connectCallback(null, exception)
         } else if(insideQuery) {
             failQuery(exception)
         } else if(insidePrepare) {
             failPrepare(exception)
         }
-
-        clearState()
     }
 
     /**

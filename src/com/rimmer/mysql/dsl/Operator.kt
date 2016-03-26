@@ -40,7 +40,7 @@ class OrOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>)
     }
 }
 
-class exists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
+class Exists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("EXISTS (")
         query.format(builder)
@@ -48,7 +48,7 @@ class exists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     }
 }
 
-class notExists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
+class NotExists(val query: Select): Op<Boolean>(Boolean::class.java, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("NOT EXISTS (")
         query.format(builder)

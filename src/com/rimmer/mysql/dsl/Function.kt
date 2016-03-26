@@ -5,7 +5,7 @@ import java.util.*
 
 abstract class Function<T>(type: Class<T>): TypedExpression<T>(type, false)
 
-class Count(val pivot: Expression, val distinct: Boolean = false): Function<Long>(Long::class.java) {
+class Count(val pivot: Expression, val distinct: Boolean = false): Function<Long>(Long::class.javaObjectType) {
     override fun format(builder: QueryBuilder) {
         builder.append("COUNT(")
         if(distinct) {
@@ -121,7 +121,7 @@ class Now: Function<DateTime>(DateTime::class.java) {
     }
 }
 
-class Rand: Function<Float>(Float::class.java) {
+class Rand: Function<Float>(Float::class.javaObjectType) {
     override fun format(builder: QueryBuilder) {
         builder.append("RAND()")
     }

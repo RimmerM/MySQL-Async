@@ -73,7 +73,7 @@ fun Column<*>.distinctCount() = Count(this, true)
 fun <T> Column<T>.distinct() = Distinct(this, type)
 fun <T> Column<T>.min() = Min(this, type)
 fun <T> Column<T>.max() = Max(this, type)
-fun <T> Column<T>.sum() = Sum(this, type)
+fun <T> Column<T>.sum() = Sum(this, Int::class.javaObjectType)
 fun <T: String?> Column<T>.trim() = Trim(this)
 fun <T: String?> Column<T>.substring(start: Int, length: Int) = Substring(this, literal(start), literal(length))
 
