@@ -67,8 +67,9 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
 
     override fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
+        val fields = if(isCount) listOf(Int::class.java) else set.fields.map {it.type}
         format(builder)
-        builder.run(c, set.fields.map {it.type}, f)
+        builder.run(c, fields, f)
     }
 
     fun forUpdate(): Select {
