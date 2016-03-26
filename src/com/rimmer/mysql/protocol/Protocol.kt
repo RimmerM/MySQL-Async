@@ -516,6 +516,7 @@ class ProtocolHandler(
         requestedTypes = null
         prepareId = 0
         prepareString = ""
+        requestedTypes = null
         result.clear()
     }
 }
