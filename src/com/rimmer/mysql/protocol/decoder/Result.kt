@@ -6,6 +6,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
 import org.joda.time.DateTime
 import org.joda.time.chrono.ISOChronology
+import java.math.BigDecimal
 import java.util.*
 
 /** Parses a prepare-statement result from the server. */
@@ -77,7 +78,7 @@ inline fun readResultRow(packet: ByteBuf, columns: Int, types: ShortArray, targe
 fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when(type) {
     // Ordered by likely usage frequency.
     // If most calls do only a few comparisons this is a lot faster than a map structure.
-    Type.DECIMAL -> decodeString(buffer, targetType)
+    Type.DECIMAL -> decodeDecimal(buffer, targetType)
     Type.TINY -> decodeByte(buffer, targetType)
     Type.SHORT -> decodeShort(buffer, targetType)
     Type.LONG -> decodeInt(buffer, targetType)
@@ -94,7 +95,7 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when
     Type.NEWDATE -> decodeDate(buffer, targetType)
     Type.VARCHAR -> decodeString(buffer, targetType)
     Type.BIT -> decodeString(buffer, targetType)
-    Type.NEWDECIMAL -> decodeString(buffer, targetType)
+    Type.NEWDECIMAL -> decodeDecimal(buffer, targetType)
     Type.ENUM -> decodeString(buffer, targetType)
     Type.SET -> decodeString(buffer, targetType)
     Type.TINY_BLOB -> decodeString(buffer, targetType)
@@ -115,6 +116,37 @@ fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
         val bytes = ByteArray(length)
         buffer.readBytes(bytes)
         return bytes
+    } else {
+        throw SqlException("Unknown target type $targetType")
+    }
+}
+
+fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
+    val string = buffer.readLengthEncodedString()
+
+    if(targetType === null || targetType === Double::class.java) {
+        try {
+            return java.lang.Double.parseDouble(string)
+        } catch(e: Throwable) {
+            return 0.0
+        }
+    } else if(targetType === Int::class.java || targetType === Long::class.java) {
+        try {
+            val v = java.lang.Long.parseLong(string)
+            return if(targetType === Int::class.java) v.toInt() else v
+        } catch(e: Throwable) {
+            return if(targetType === Int::class.java) 0 else 0L
+        }
+    } else if(targetType === Float::class.java) {
+        try {
+            return java.lang.Float.parseFloat(string)
+        } catch(e: Throwable) {
+            return 0f
+        }
+    } else if(targetType === BigDecimal::class.java) {
+        return BigDecimal(string)
+    } else if(targetType === String::class.java) {
+        return string
     } else {
         throw SqlException("Unknown target type $targetType")
     }
