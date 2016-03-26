@@ -17,6 +17,6 @@ class Delete(val table: Table, val predicate: Op<Boolean>? = null, val isIgnore:
             predicate.format(builder)
         }
 
-        builder.run(c, f)
+        builder.run(c, null, f)
     }
 }

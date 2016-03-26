@@ -38,7 +38,7 @@ class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boo
             }
         }
 
-        builder.run(c, f)
+        builder.run(c, null, f)
     }
 }
 
@@ -100,6 +100,6 @@ class BatchInsert(val table: Table, val isIgnore: Boolean = false, val isReplace
             }
         }
 
-        builder.run(c, f)
+        builder.run(c, null, f)
     }
 }

@@ -21,6 +21,6 @@ open class Column<T>(val table: Table, val name: String, type: Class<T>, nullabl
         builder.append(quotedName)
     }
 
-    override val fields: List<Expression> = listOf(this)
+    override val fields: List<TypedExpression<*>> = listOf(this)
     override val source: ColumnSet get() = table
 }

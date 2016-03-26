@@ -4,22 +4,22 @@ import org.joda.time.DateTime
 import java.util.*
 
 interface FieldSet {
-    val fields: List<Expression>
+    val fields: List<TypedExpression<*>>
     val source: ColumnSet
 }
 
 interface ColumnSet: FieldSet {
     val columns: List<Column<*>>
-    override val fields: List<Expression> get() = columns
+    override val fields: List<TypedExpression<*>> get() = columns
     override val source: ColumnSet get() = this
 
     fun format(builder: QueryBuilder)
 
-    fun slice(vararg columns: Expression): FieldSet = Slice(this, columns.toList())
-    fun slice(columns: List<Expression>): FieldSet = Slice(this, columns)
+    fun slice(vararg columns: TypedExpression<*>): FieldSet = Slice(this, columns.toList())
+    fun slice(columns: List<TypedExpression<*>>): FieldSet = Slice(this, columns)
 }
 
-class Slice(override val source: ColumnSet, override val fields: List<Expression>): FieldSet
+class Slice(override val source: ColumnSet, override val fields: List<TypedExpression<*>>): FieldSet
 
 open class Table(name: String? = null): ColumnSet {
     val tableName = name ?: javaClass.simpleName.removeSuffix("Table")
@@ -94,7 +94,7 @@ open class Table(name: String? = null): ColumnSet {
     }
 
     override fun format(builder: QueryBuilder) { builder.append(quotedName) }
-    override val fields: List<Expression> get() = columns
+    override val fields: List<TypedExpression<*>> get() = columns
 
     private fun<T: Column<*>> replaceColumn(oldColumn: Column<*>, newColumn: T) : T {
         columns.remove(oldColumn)
