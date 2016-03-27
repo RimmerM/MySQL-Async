@@ -77,9 +77,19 @@ class QueryResult(val affectedRows: Long, val lastInsert: Long, val status: Stri
  * @param user The username to connect with.
  * @param password The password for this user.
  * @param database The database to connect to.
+ * @param useNative Use native transport instead of NIO (Linux only).
  */
-fun connect(group: EventLoopGroup, host: String, port: Int, user: String, password: String, database: String, f: (Connection?, Throwable?) -> Unit) {
-    val channelType = if(group is EpollEventLoopGroup) EpollSocketChannel::class.java else NioSocketChannel::class.java
+fun connect(
+    group: EventLoopGroup,
+    host: String,
+    port: Int,
+    user: String,
+    password: String,
+    database: String,
+    useNative: Boolean = false,
+    f: (Connection?, Throwable?) -> Unit
+) {
+    val channelType = if(useNative) EpollSocketChannel::class.java else NioSocketChannel::class.java
 
     // Create the connection channel.
     val bootstrap = Bootstrap()
