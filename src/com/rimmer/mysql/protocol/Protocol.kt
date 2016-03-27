@@ -133,8 +133,8 @@ class ProtocolHandler(
 
         prepareString = query
         prepareCallback = f
-        currentContext!!.writeAndFlush(writePrepareStatement(query), currentContext!!.voidPromise())
         insidePrepare = true
+        currentContext!!.writeAndFlush(writePrepareStatement(query), currentContext!!.voidPromise())
     }
 
     /** Performs a query with a prepared statement. */
@@ -143,8 +143,8 @@ class ProtocolHandler(
 
         queryStart = System.nanoTime()
         requestedTypes = targetTypes
-        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values), currentContext!!.voidPromise())
         insideQuery = true
+        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values), currentContext!!.voidPromise())
     }
 
     /**
@@ -472,8 +472,7 @@ class ProtocolHandler(
             else -> if(insideQuery || insidePrepare) {
                 handleQueryResponse(source)
             } else {
-                println("Received an unknown packet type $type")
-                //onException(SqlException("Received an unknown packet type $type"))
+                onException(SqlException("Received an unknown packet type $type"))
             }
         }
     }
