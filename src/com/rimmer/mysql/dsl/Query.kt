@@ -54,8 +54,8 @@ inline fun <T: Table, U> T.batchInsert(
 ): BatchInsert {
     val i = BatchInsert(this, isIgnore, isReplace)
     for(v in list) {
-        f(i, v)
         i.addBatch()
+        f(i, v)
     }
     return i
 }
