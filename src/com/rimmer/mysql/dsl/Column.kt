@@ -1,7 +1,7 @@
 package com.rimmer.mysql.dsl
 
 open class Column<T>(val table: Table, val name: String, type: Class<T>, nullable: Boolean = false) : TypedExpression<T>(type, nullable), FieldSet {
-    val quotedName = "`$name`"
+    val quotedName = "$table.`$name`"
 
     override fun equals(other: Any?): Boolean {
         return (other as? Column<*>)?.let {
