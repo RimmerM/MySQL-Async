@@ -46,6 +46,7 @@ class Join(val table: Table) : ColumnSet {
     override fun format(builder: QueryBuilder) {
         builder.append(table.tableName)
         for(p in parts) {
+            builder.append(' ')
             builder.append(p.type.name)
             builder.append(" JOIN ")
             builder.append(p.table.quotedName)
@@ -57,6 +58,7 @@ class Join(val table: Table) : ColumnSet {
                 builder.append(" AND ")
                 it().format(builder)
             }
+            builder.append(' ')
         }
     }
 
