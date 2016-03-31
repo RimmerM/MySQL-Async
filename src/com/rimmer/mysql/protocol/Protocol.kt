@@ -115,7 +115,7 @@ class ProtocolHandler(
 
     override fun disconnect() {
         if(hasHandshake) {
-            val exception = SqlException("Connection is being closed")
+            val exception = SqlException(0, "", "Connection is being closed")
             failPrepare(exception)
             failQuery(exception)
             clearState()
@@ -182,7 +182,7 @@ class ProtocolHandler(
      * This can happen in any context.
      */
     private fun onError(packet: ByteBuf) = readError(packet, serverCaps) {
-        errorCode, sqlState, message -> onException(SqlException(message))
+        errorCode, sqlState, message -> onException(SqlException(errorCode.toInt(), sqlState, message))
     }
 
     private fun onException(exception: Throwable) {
@@ -252,7 +252,7 @@ class ProtocolHandler(
         } else if(insideQuery) {
             processingRows = true
         } else {
-            throw SqlException("onColumnsFinished called with invalid internal state")
+            throw SqlException(0, "", "onColumnsFinished called with invalid internal state")
         }
     }
 
@@ -264,7 +264,7 @@ class ProtocolHandler(
         warnings, serverStatus ->
 
         if(!insidePrepare || !processingParams) {
-            throw SqlException("onParamsFinished called with invalid internal state")
+            throw SqlException(0, "", "onParamsFinished called with invalid internal state")
         }
 
         processingParams = false
@@ -286,7 +286,7 @@ class ProtocolHandler(
         warnings, serverStatus ->
 
         if(!processingRows) {
-            throw SqlException("onRowsFinished called with invalid internal state")
+            throw SqlException(0, "", "onRowsFinished called with invalid internal state")
         }
 
         processingRows = false
@@ -374,7 +374,7 @@ class ProtocolHandler(
 
     /** Makes sure the connection isn't busy. */
     private fun assertReadyForQuery() {
-        if(insideQuery || insidePrepare) throw SqlException("Connection still running query")
+        if(insideQuery || insidePrepare) throw SqlException(0, "", "Connection still running query")
     }
 
     /** Entry point of incoming traffic; handles reading packets and fragmentation. */
@@ -404,6 +404,19 @@ class ProtocolHandler(
 
             // Deallocate the buffer; for wrapped buffers this releases the contained buffers as well.
             packet.release()
+        }
+    }
+
+    // Called when the channel is closed.
+    override fun channelInactive(context: ChannelHandlerContext) {
+        val exception = SqlException(0, "", "Connection is being closed")
+        if(hasHandshake) {
+            failPrepare(exception)
+            failQuery(exception)
+            clearState()
+            hasHandshake = false
+        } else {
+            connectCallback(null, exception)
         }
     }
 
@@ -456,7 +469,7 @@ class ProtocolHandler(
             } else if(processingRows) {
                 onRowsFinished(source)
             } else {
-                onException(SqlException("Received an unrecognized EOF packet"))
+                onException(SqlException(0, "", "Received an unrecognized EOF packet"))
             }
 
             ResultMarker.ok -> if(insidePrepare) {
@@ -466,13 +479,13 @@ class ProtocolHandler(
             } else if(insideQuery) {
                 onQueryOk(source)
             } else {
-                onException(SqlException("Received an unrecognized OK packet"))
+                onException(SqlException(0, "", "Received an unrecognized OK packet"))
             }
 
             else -> if(insideQuery || insidePrepare) {
                 handleQueryResponse(source)
             } else {
-                onException(SqlException("Received an unknown packet type $type"))
+                onException(SqlException(0, "", "Received an unknown packet type $type"))
             }
         }
     }
@@ -496,7 +509,7 @@ class ProtocolHandler(
         } else {
             // This happens when the result of a text query is returned.
             // We only support the binary interface, so we don't handle this.
-            throw SqlException("MySQL text protocol is unsupported")
+            throw SqlException(0, "", "MySQL text protocol is unsupported")
         }
     }
 

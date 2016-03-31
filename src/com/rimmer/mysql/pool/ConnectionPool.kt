@@ -59,7 +59,7 @@ class SingleThreadPool(
             } else if(waiting.size < config.maxWaiting) {
                 waiting.offer(f)
             } else {
-                f(null, SqlException("Connection queue full"))
+                f(null, SqlException(0, "", "Connection queue full"))
             }
         } else {
             val connection = idlePool.pop()

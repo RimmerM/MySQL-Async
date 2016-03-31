@@ -105,7 +105,7 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when
     Type.VAR_STRING -> decodeString(buffer, targetType)
     Type.STRING -> decodeString(buffer, targetType)
     Type.GEOMETRY -> decodeString(buffer, targetType)
-    else -> throw SqlException("Unknown result type $type")
+    else -> throw SqlException(0, "", "Unknown result type $type")
 }
 
 fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
@@ -117,7 +117,7 @@ fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
         buffer.readBytes(bytes)
         return bytes
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -148,7 +148,7 @@ fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === String::class.javaObjectType) {
         return string
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -162,7 +162,7 @@ fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Boolean::class.javaObjectType) {
         v != 0L
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -176,7 +176,7 @@ fun decodeInt(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Boolean::class.javaObjectType) {
         v != 0
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -192,7 +192,7 @@ fun decodeShort(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Boolean::class.javaObjectType) {
         v != 0.toShort()
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -210,7 +210,7 @@ fun decodeByte(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Short::class.javaObjectType) {
         v.toShort()
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -226,7 +226,7 @@ fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Double::class.javaObjectType) {
         v.toDouble()
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -242,7 +242,7 @@ fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Float::class.javaObjectType) {
         v.toFloat()
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
 
@@ -287,6 +287,6 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any? {
     } else if(targetType === Long::class.javaObjectType) {
         timestamp
     } else {
-        throw SqlException("Unknown target type $targetType")
+        throw SqlException(0, "", "Unknown target type $targetType")
     }
 }

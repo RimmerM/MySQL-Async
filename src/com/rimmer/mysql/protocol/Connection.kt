@@ -108,7 +108,7 @@ fun connect(
     bootstrap.connect(host, port) onFail { f(null, it) }
 }
 
-class SqlException(cause: String): Exception(cause)
+class SqlException(val code: Int, val state: String, cause: String): Exception(cause)
 
 inline infix fun <T> Future<T>.then(crossinline f: (T) -> Unit) {
     addListener(GenericFutureListener<Future<T>> { future ->
