@@ -88,9 +88,9 @@ fun <T: Any> Expression.coalesce(alternate: TypedExpression<T>) = Coalesce(this,
 fun <T> TypedExpression<T>.isNull() = IsNullOp(this)
 fun <T> TypedExpression<T>.isNotNull() = IsNotNullOp(this)
 
-infix fun <T: Any> TypedExpression<T>.eq(value: T?) = if(value === null) isNull() else EqOp(this, literal(value))
+infix fun <T: Any> TypedExpression<out T?>.eq(value: T?) = if(value === null) isNull() else EqOp(this, literal(value))
 infix fun Expression.eq(rhs: Expression) = EqOp(this, rhs)
-infix fun <T: Any> TypedExpression<T>.neq(value: T?) = if(value === null) isNotNull() else NeqOp(this, literal(value))
+infix fun <T: Any> TypedExpression<out T?>.neq(value: T?) = if(value === null) isNotNull() else NeqOp(this, literal(value))
 infix fun Expression.neq(rhs: Expression) = NeqOp(this, rhs)
 
 infix fun Op<Boolean>.and(op: TypedExpression<Boolean>) = if(op is LiteralOp<Boolean> && op.value == true) this else AndOp(this, op)
@@ -129,4 +129,4 @@ infix fun <T: String?> TypedExpression<T>.notRegex(pattern: String) = NotRegexOp
 infix fun <T: Any> Expression.inList(list: Iterable<T>) = InListOp(this, list, true)
 infix fun <T: Any> Expression.notInList(list: Iterable<T>) = InListOp(this, list, false)
 
-fun <T, S: Any> TypedExpression<T>.between(from: S, to: S) = Between(this, literal(from), literal(to))
+fun <T, S: Any> TypedExpression<out T?>.between(from: S, to: S) = Between(this, literal(from), literal(to))
