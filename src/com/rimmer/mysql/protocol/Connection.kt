@@ -3,6 +3,7 @@ package com.rimmer.mysql.protocol
 import io.netty.bootstrap.Bootstrap
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.*
+import io.netty.channel.epoll.Epoll
 import io.netty.channel.epoll.EpollEventLoopGroup
 import io.netty.channel.epoll.EpollSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -16,9 +17,10 @@ interface Connection {
      * @param query The query to perform, in prepared statement format.
      * @param values The parameters to send to the query.
      * @param targetTypes The types you want the query to return. If not set, the driver decides what types to return.
+     * @param id An identifier for this query which will be sent to any listeners.
      * @return A query result object.
      */
-    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, f: (QueryResult?, Throwable?) -> Unit)
+    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, id: Long = 0L, f: (QueryResult?, Throwable?) -> Unit)
 
     /** Closes this connection. */
     fun disconnect()
@@ -37,6 +39,11 @@ interface Connection {
 
     /** The amount of time this connection has been idle since the last action. */
     val idleTime: Long
+}
+
+/** Represents a listener to executed queries which will be called for each query. */
+interface QueryListener {
+    fun onQuery(id: Long, query: String, result: QueryResult?, error: Throwable?)
 }
 
 /** Contains the result data for a single row. */
@@ -77,6 +84,7 @@ class QueryResult(val affectedRows: Long, val lastInsert: Long, val status: Stri
  * @param user The username to connect with.
  * @param password The password for this user.
  * @param database The database to connect to.
+ * @param listener Called when queries happen.
  * @param useNative Use native transport instead of NIO (Linux only).
  */
 fun connect(
@@ -86,10 +94,11 @@ fun connect(
     user: String,
     password: String,
     database: String,
+    listener: QueryListener? = null,
     useNative: Boolean = false,
     f: (Connection?, Throwable?) -> Unit
 ) {
-    val channelType = if(useNative) EpollSocketChannel::class.java else NioSocketChannel::class.java
+    val channelType = if(useNative && Epoll.isAvailable()) EpollSocketChannel::class.java else NioSocketChannel::class.java
 
     // Create the connection channel.
     val bootstrap = Bootstrap()
@@ -100,7 +109,7 @@ fun connect(
         .channel(channelType)
         .handler(object: ChannelInitializer<Channel>() {
             override fun initChannel(channel: Channel) {
-                channel.pipeline().addLast(ProtocolHandler(user, password, database, f))
+                channel.pipeline().addLast(ProtocolHandler(user, password, database, f, listener))
             }
         })
 

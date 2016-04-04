@@ -19,7 +19,8 @@ class ProtocolHandler(
     val user: String,
     val password: String,
     val database: String,
-    val connectCallback: (Connection?, Throwable?) -> Unit
+    val connectCallback: (Connection?, Throwable?) -> Unit,
+    val listener: QueryListener?
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
     private var queryCallback: ((QueryResult?, Throwable?) -> Unit)? = null
@@ -75,6 +76,12 @@ class ProtocolHandler(
     /** The time at which the last query ended. */
     private var queryEnd = System.nanoTime()
 
+    /** The id of the current query being executed. */
+    private var queryId = 0L
+
+    /** The query string currently being executed. */
+    private var queryString = ""
+
     /** Contains cached prepared statements. */
     private val statementCache = HashMap<String, Statement>()
 
@@ -94,8 +101,10 @@ class ProtocolHandler(
     override val idleTime: Long
         get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
 
-    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, id: Long, f: (QueryResult?, Throwable?) -> Unit) {
         queryCallback = f
+        queryId = id
+        queryString = query
 
         // Check if the statement was already in cache.
         val statement = statementCache[query]
@@ -369,6 +378,12 @@ class ProtocolHandler(
         // The callback may change our state before returning, which is why the state needs to be final here.
         val f = queryCallback
         queryCallback = null
+        val id = queryId
+        queryId = 0L
+        val string = queryString
+        queryString = ""
+
+        listener?.onQuery(id, string, result, error)
         f?.invoke(result, error)
     }
 

@@ -21,7 +21,7 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val limit: Int? =
         values.put(column, value)
     }
 
-    override fun run(c: Connection, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun run(c: Connection, queryId: Long, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
         builder.append("UPDATE ")
         table.format(builder)
@@ -47,6 +47,6 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val limit: Int? =
             builder.append(limit)
         }
 
-        builder.run(c, null, f)
+        builder.run(c, null, queryId, f)
     }
 }
