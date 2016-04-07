@@ -65,7 +65,7 @@ class SingleThreadPool(
             val connection = idlePool.pop()
 
             // Check if the connection is busy, just in case we are currently doing an alive-test.
-            if(connection.busy) {
+            if(connection.busy || !connection.connected) {
                 get(f)
             } else {
                 f(connection, null)

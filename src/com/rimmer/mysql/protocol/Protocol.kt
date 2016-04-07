@@ -90,7 +90,7 @@ class ProtocolHandler(
      */
 
     override val connected: Boolean
-        get() = hasHandshake
+        get() = hasHandshake && currentContext != null && currentContext!!.channel().isActive
 
     override val busy: Boolean
         get() = queryStart > 0
