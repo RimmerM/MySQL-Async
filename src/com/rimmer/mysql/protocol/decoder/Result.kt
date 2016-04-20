@@ -2,6 +2,8 @@ package com.rimmer.mysql.protocol.decoder
 
 import com.rimmer.mysql.protocol.SqlException
 import com.rimmer.mysql.protocol.constants.Type
+import com.rimmer.yttrium.ByteString
+import com.rimmer.yttrium.LocalByteString
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
 import org.joda.time.DateTime
@@ -111,6 +113,11 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when
 fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
     if(targetType === null || targetType === String::class.javaObjectType) {
         return buffer.readLengthEncodedString()
+    } else if(targetType === ByteString::class.java) {
+        val length = buffer.readLengthEncoded().toInt()
+        val bytes = ByteArray(length)
+        buffer.readBytes(bytes)
+        return LocalByteString(bytes)
     } else if(targetType === ByteArray::class.javaObjectType) {
         val length = buffer.readLengthEncoded().toInt()
         val bytes = ByteArray(length)

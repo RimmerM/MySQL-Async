@@ -1,5 +1,6 @@
 package com.rimmer.mysql.dsl
 
+import com.rimmer.yttrium.ByteString
 import org.joda.time.DateTime
 import java.util.*
 
@@ -77,6 +78,12 @@ open class Table(name: String? = null): ColumnSet {
 
     fun text(name: String): Column<String> {
         val answer = Column(this, name, String::class.javaObjectType)
+        columns.add(answer)
+        return answer
+    }
+
+    fun byteText(name: String): Column<ByteString> {
+        val answer = Column(this, name, ByteString::class.javaObjectType)
         columns.add(answer)
         return answer
     }

@@ -3,6 +3,7 @@ package com.rimmer.mysql.protocol.encoder
 import com.rimmer.mysql.protocol.constants.CommandType
 import com.rimmer.mysql.protocol.constants.Type
 import com.rimmer.mysql.protocol.decoder.writeLengthEncoded
+import com.rimmer.yttrium.ByteString
 import io.netty.buffer.ByteBuf
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -82,6 +83,7 @@ fun encodeBinary(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
         // If most calls do only a few comparisons this is a lot faster than a map structure.
         is Int -> encodeInt(buffer, types, index, value)
         is Long -> encodeLong(buffer, types, index, value)
+        is ByteString -> encodeByteString(buffer, types, index, value)
         is String, is BigInteger, is BigDecimal -> encodeString(buffer, types, index, value)
         is Boolean -> encodeBoolean(buffer, types, index, value)
         is DateTime -> encodeDateTime(buffer, types, index, value)
@@ -108,6 +110,12 @@ fun encodeString(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
     types[index * 2] = Type.VARCHAR.toByte()
     buffer.writeLengthEncoded(string.length)
     buffer.writeBytes(string.toByteArray())
+}
+
+fun encodeByteString(buffer: ByteBuf, types: ByteArray, index: Int, value: ByteString) {
+    types[index * 2] = Type.VARCHAR.toByte()
+    buffer.writeLengthEncoded(value.size)
+    value.write(buffer)
 }
 
 fun encodeByte(buffer: ByteBuf, types: ByteArray, index: Int, value: Byte) {
