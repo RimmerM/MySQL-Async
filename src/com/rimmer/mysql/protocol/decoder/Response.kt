@@ -9,6 +9,7 @@ import java.nio.charset.Charset
 
 /** Parses an Ok response from the server. */
 inline fun readOk(packet: ByteBuf, capabilities: Int, f: (affectedRows: Long, lastInsertId: Long, serverStatus: Short, warnings: Short, message: String) -> Unit) {
+    packet.skipBytes(1)
     val affectedRows = packet.readLengthEncoded()
     val lastInsert = packet.readLengthEncoded()
     var serverStatus = 0.toShort()
