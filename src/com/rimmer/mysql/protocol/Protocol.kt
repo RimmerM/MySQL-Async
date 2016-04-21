@@ -128,7 +128,7 @@ class ProtocolHandler(
             failPrepare(exception)
             failQuery(exception)
             clearState()
-            currentContext?.writeAndFlush(writeQuit())?.then {
+            currentContext?.writeAndFlush(writeQuit())?.addListener {
                 currentContext!!.close()
             }
 

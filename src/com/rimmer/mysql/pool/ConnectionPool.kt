@@ -14,14 +14,14 @@ import java.util.*
  * @param maxIdleTime The maximum idle time in ns for a connection. After this time it is destroyed.
  * @param maxBusyTime The maximum busy time in ns for a connection. After it has been busy for this time, it is destroyed.
  * @param maxWaiting The maximum number of users that can be waiting for a connection.
- * @param keepaliveInterval The interval in ns between which connections are tested.
+ * @param checkDelta The minimum time between checks for stuck connections.
  */
 class PoolConfiguration(
     val maxItems: Int,
-    val maxIdleTime: Long = 10L * 1000L * 1000000L,
+    val maxIdleTime: Long = 60L * 1000L * 1000000L,
     val maxBusyTime: Long = 0,
     val maxWaiting: Int = 128,
-    val keepaliveInterval: Long = 30L * 1000L * 1000000L
+    val checkDelta: Long = 60L * 1000L * 1000000L
 )
 
 /** Provides an interface for using connections from a pool. */
@@ -42,6 +42,7 @@ class SingleThreadPool(
     private val connections = ArrayList<PoolConnection>()
     private val waiting: Queue<(Connection?, Throwable?) -> Unit> = LinkedList()
     private var connectionCount = 0
+    private var lastCheck = System.nanoTime()
 
     override fun get(f: (Connection?, Throwable?) -> Unit) {
         if(idlePool.empty()) {
@@ -56,16 +57,29 @@ class SingleThreadPool(
                         f(pooled, null)
                     }
                 }
-            } else if(waiting.size < config.maxWaiting) {
-                waiting.offer(f)
             } else {
-                f(null, SqlException(0, "", "Connection queue full"))
+                // There being no connections available may indicate a high load,
+                // but may also indicate connections being stuck.
+                // We check each one for query timeouts.
+                val time = System.nanoTime()
+                if(time - lastCheck > config.checkDelta) {
+                    checkConnections()
+                    lastCheck = time
+                    get(f)
+                } else if(waiting.size < config.maxWaiting) {
+                    // Queue this request if we have space left.
+                    waiting.offer(f)
+                } else {
+                    f(null, SqlException(0, "", "Connection queue full"))
+                }
             }
         } else {
             val connection = idlePool.pop()
 
-            // Check if the connection is busy, just in case we are currently doing an alive-test.
-            if(connection.busy || !connection.connected) {
+            // If the connection timed out or is otherwise unusable, we drop it and create a new one.
+            if(connection.busy || !connection.connected || connection.idleTime > config.maxIdleTime) {
+                connection.connection.disconnect()
+                connectionCount--
                 get(f)
             } else {
                 f(connection, null)
@@ -87,6 +101,8 @@ class SingleThreadPool(
     }
 
     fun checkConnections() {
+        println("Checking MySQL connections...")
+
         var i = 0
         while(i < connections.size) {
             val c = connections[i]
@@ -96,12 +112,10 @@ class SingleThreadPool(
                 connectionCount--
                 c.connection.disconnect()
                 connections.removeAt(i)
-                println("Closing idle connection $i")
+                println("Closing idle MySQL connection $i")
             } else {
                 i++
             }
-
-            // TODO: Do a keep-alive test here without causing synchronization issues.
         }
     }
 }
