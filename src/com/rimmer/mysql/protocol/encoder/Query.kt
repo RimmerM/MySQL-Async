@@ -108,8 +108,9 @@ fun encodeBinary(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
 fun encodeString(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
     val string = value.toString()
     types[index * 2] = Type.VARCHAR.toByte()
-    buffer.writeLengthEncoded(string.length)
-    buffer.writeBytes(string.toByteArray())
+    val bytes = string.toByteArray(Charsets.UTF_8)
+    buffer.writeLengthEncoded(bytes.size)
+    buffer.writeBytes(bytes)
 }
 
 fun encodeByteString(buffer: ByteBuf, types: ByteArray, index: Int, value: ByteString) {
