@@ -19,7 +19,7 @@ class ProtocolHandler(
     val user: String,
     val password: String,
     val database: String,
-    val connectCallback: (Connection?, Throwable?) -> Unit,
+    var connectCallback: ((Connection?, Throwable?) -> Unit)?,
     val listener: QueryListener?
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
@@ -128,11 +128,12 @@ class ProtocolHandler(
             failPrepare(exception)
             failQuery(exception)
             clearState()
+            hasHandshake = false
+            connectCallback = null
+
             currentContext?.writeAndFlush(writeQuit())?.addListener {
                 currentContext!!.close()
             }
-
-            hasHandshake = false
         }
     }
 
@@ -183,7 +184,7 @@ class ProtocolHandler(
         affectedRows, lastInsertId, serverStatus, warnings, message ->
 
         hasHandshake = true
-        connectCallback(this, null)
+        connectCallback?.invoke(this, null)
     }
 
     /**
@@ -197,7 +198,7 @@ class ProtocolHandler(
     private fun onException(exception: Throwable) {
         if(!hasHandshake) {
             clearState()
-            connectCallback(null, exception)
+            connectCallback?.invoke(null, exception)
         } else if(insideQuery) {
             failQuery(exception)
         } else if(insidePrepare) {
@@ -430,8 +431,9 @@ class ProtocolHandler(
             failQuery(exception)
             clearState()
             hasHandshake = false
+            connectCallback = null
         } else {
-            connectCallback(null, exception)
+            connectCallback?.invoke(null, exception)
         }
     }
 
