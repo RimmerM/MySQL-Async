@@ -15,13 +15,15 @@ import java.util.*
  * @param maxBusyTime The maximum busy time in ns for a connection. After it has been busy for this time, it is destroyed.
  * @param maxWaiting The maximum number of users that can be waiting for a connection.
  * @param checkDelta The minimum time between checks for stuck connections.
+ * @param debug If set, the pool prints debug text when connections are created and closed.
  */
 class PoolConfiguration(
     val maxItems: Int,
     val maxIdleTime: Long = 60L * 1000L * 1000000L,
     val maxBusyTime: Long = 0,
     val maxWaiting: Int = 128,
-    val checkDelta: Long = 60L * 1000L * 1000000L
+    val checkDelta: Long = 60L * 1000L * 1000000L,
+    val debug: Boolean = false
 )
 
 /** Provides an interface for using connections from a pool. */
@@ -47,6 +49,10 @@ class SingleThreadPool(
     override fun get(f: (Connection?, Throwable?) -> Unit) {
         if(idlePool.empty()) {
             if(connectionCount < config.maxItems) {
+                if(config.debug) {
+                    println("Creating new MySQL connection in pool.")
+                }
+
                 connectionCount++
                 creator {c, e ->
                     if(c == null) {
@@ -78,6 +84,10 @@ class SingleThreadPool(
 
             // If the connection timed out or is otherwise unusable, we drop it and create a new one.
             if(connection.busy || !connection.connected || connection.idleTime > config.maxIdleTime) {
+                if(config.debug) {
+                    println("Closing timed out MySQL connection.")
+                }
+
                 connection.connection.disconnect()
                 connectionCount--
                 get(f)
@@ -101,7 +111,9 @@ class SingleThreadPool(
     }
 
     fun checkConnections() {
-        println("Checking MySQL connections...")
+        if(config.debug) {
+            println("Checking MySQL connections...")
+        }
 
         var i = 0
         while(i < connections.size) {
@@ -112,7 +124,10 @@ class SingleThreadPool(
                 connectionCount--
                 c.connection.disconnect()
                 connections.removeAt(i)
-                println("Closing idle MySQL connection $i")
+
+                if(config.debug) {
+                    println("Closing idle MySQL connection $i")
+                }
             } else {
                 i++
             }
