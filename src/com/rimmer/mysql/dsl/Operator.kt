@@ -10,23 +10,11 @@ class LiteralOp<T: Any>(val value: T): TypedExpression<T>(value.javaClass, false
 
 class AndOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>): Op<Boolean>(lhs.type, lhs.nullable) {
     override fun format(builder: QueryBuilder) {
-        if(lhs is OrOp) {
-            builder.append('(')
-            lhs.format(builder)
-            builder.append(')')
-        } else {
-            lhs.format(builder)
-        }
-
-        builder.append(" and ")
-
-        if(rhs is OrOp) {
-            builder.append('(')
-            rhs.format(builder)
-            builder.append(')')
-        } else {
-            rhs.format(builder)
-        }
+        builder.append('(')
+        lhs.format(builder)
+        builder.append(") and (")
+        rhs.format(builder)
+        builder.append(')')
     }
 }
 
@@ -98,34 +86,23 @@ class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList:
 class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
-        builder.append(" BETWEEN ")
+        builder.append(" BETWEEN (")
         from.format(builder)
-        builder.append(" AND ")
+        builder.append(") AND (")
         to.format(builder)
+        builder.append(')')
     }
 }
 
 open class CompareOp(val lhs: Expression, val rhs: Expression, val op: String): Op<Boolean>(Boolean::class.javaObjectType, false) {
     override fun format(builder: QueryBuilder) {
-        if(lhs is OrOp) {
-            builder.append('(')
-            lhs.format(builder)
-            builder.append(')')
-        } else {
-            lhs.format(builder)
-        }
-
-        builder.append(' ')
+        builder.append('(')
+        lhs.format(builder)
+        builder.append(") ")
         builder.append(op)
-        builder.append(' ')
-
-        if(rhs is OrOp) {
-            builder.append('(')
-            rhs.format(builder)
-            builder.append(')')
-        } else {
-            rhs.format(builder)
-        }
+        builder.append(" (")
+        rhs.format(builder)
+        builder.append(')')
     }
 }
 
@@ -142,17 +119,21 @@ class NotRegexOp(lhs: Expression, rhs: Expression): CompareOp(lhs, rhs, "NOT REG
 
 class AddOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
+        builder.append('(')
         lhs.format(builder)
-        builder.append('+')
+        builder.append(") + (")
         rhs.format(builder)
+        builder.append(')')
     }
 }
 
 class SubOp<T, U: T>(val lhs: TypedExpression<T>, val rhs: TypedExpression<U>): TypedExpression<T>(lhs.type, false) {
     override fun format(builder: QueryBuilder) {
+        builder.append('(')
         lhs.format(builder)
-        builder.append('-')
+        builder.append(") - (")
         rhs.format(builder)
+        builder.append(')')
     }
 }
 
