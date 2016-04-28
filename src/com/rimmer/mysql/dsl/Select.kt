@@ -52,11 +52,11 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
 
         if(limit != null) {
             append(" LIMIT ")
-            append(limit!!)
+            argument(limit!!)
 
             if(offset != null) {
                 append(" OFFSET ")
-                append(offset!!)
+                argument(offset!!)
             }
         }
 
