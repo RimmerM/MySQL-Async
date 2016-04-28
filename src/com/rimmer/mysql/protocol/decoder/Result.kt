@@ -263,29 +263,30 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any? {
     var second = 0
     var ms = 0
 
-    // Special case for empty dates.
-    if(length == 0) {
-        return null
-    }
-
-    if(length >= 4) {
-        year = ByteBufUtil.swapShort(buffer.readShort()).toInt()
-        month = buffer.readByte().toInt()
-        day = buffer.readByte().toInt()
-    }
-
-    if(length >= 7) {
-        hour = buffer.readByte().toInt()
-        minute = buffer.readByte().toInt()
-        second = buffer.readByte().toInt()
-    }
-
-    if(length >= 11) {
-        ms = ByteBufUtil.swapInt(buffer.readInt())
-    }
-
     val chronology = ISOChronology.getInstanceUTC()
-    val timestamp = chronology.getDateTimeMillis(year, month, day, hour, minute, second, ms)
+
+    // Special case for empty dates.
+    val timestamp = if(length == 0) {
+        0L
+    } else {
+        if (length >= 4) {
+            year = ByteBufUtil.swapShort(buffer.readShort()).toInt()
+            month = buffer.readByte().toInt()
+            day = buffer.readByte().toInt()
+        }
+
+        if (length >= 7) {
+            hour = buffer.readByte().toInt()
+            minute = buffer.readByte().toInt()
+            second = buffer.readByte().toInt()
+        }
+
+        if (length >= 11) {
+            ms = ByteBufUtil.swapInt(buffer.readInt())
+        }
+
+        chronology.getDateTimeMillis(year, month, day, hour, minute, second, ms)
+    }
 
     return if(targetType === null || targetType === DateTime::class.javaObjectType) {
         DateTime(timestamp, chronology)
