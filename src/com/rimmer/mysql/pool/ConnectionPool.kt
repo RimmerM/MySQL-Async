@@ -13,7 +13,8 @@ import java.util.*
  * @param maxItems The maximum number of active connections in the pool.
  * @param maxIdleTime The maximum idle time in ns for a connection. After this time it is destroyed.
  * @param maxBusyTime The maximum busy time in ns for a connection. After it has been busy for this time, it is destroyed.
- * @param maxWaiting The maximum number of users that can be waiting for a connection.
+ * @param maxWaiting The maximum number of users that can be waiting for a connection in a healthy application.
+ * If it exceeds this number the pool is reset. Set to 0 for an unlimited number.
  * @param checkDelta The minimum time between checks for stuck connections.
  * @param debug If set, the pool prints debug text when connections are created and closed.
  */
@@ -72,11 +73,14 @@ class SingleThreadPool(
                     checkConnections()
                     lastCheck = time
                     get(f)
-                } else if(waiting.size < config.maxWaiting) {
+                } else if(waiting.size < config.maxWaiting || config.maxWaiting == 0) {
                     // Queue this request if we have space left.
                     waiting.offer(f)
                 } else {
-                    f(null, SqlException(0, "", "Connection queue full"))
+                    // Reset the pool if we are over the health limit.
+                    // While this may fail a lot of requests, it prevents the server from getting completely stuck.
+                    reset()
+                    get(f)
                 }
             }
         } else {
@@ -132,6 +136,20 @@ class SingleThreadPool(
                 i++
             }
         }
+    }
+
+    fun reset() {
+        println("Hard-resetting MySQL pool. This means something went really wrong.")
+
+        // Reset everything to its initial value.
+        idlePool.clear()
+        connections.forEach {
+            it.connection.disconnect()
+        }
+        connections.clear()
+        waiting.clear()
+        connectionCount = 0
+        lastCheck = System.nanoTime()
     }
 }
 
