@@ -7,6 +7,7 @@ import com.rimmer.mysql.protocol.Row
 import com.rimmer.yttrium.Context
 import com.rimmer.yttrium.NotFoundException
 import com.rimmer.yttrium.Task
+import com.rimmer.yttrium.finished
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -169,6 +170,10 @@ fun Query.unitTask(pool: SQLPool, context: Context): Task<Unit> {
 /** Performs the provided actions in parallel and finishes when all have been executed. */
 fun parallel(pool: SQLPool, context: Context, vararg queries: Query): Task<Unit> {
     val total = queries.size
+    if(total == 0) {
+        return finished(Unit)
+    }
+
     val count = AtomicInteger(0)
     val failed = AtomicBoolean(false)
     val task = Task<Unit>()
