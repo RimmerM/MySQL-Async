@@ -123,6 +123,9 @@ fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
         val bytes = ByteArray(length)
         buffer.readBytes(bytes)
         return bytes
+    } else if(targetType === ByteBuf::class.java) {
+        val length = buffer.readLengthEncoded().toInt()
+        return buffer.readBytes(length)
     } else {
         throw SqlException(0, "", "Unknown target type $targetType")
     }
