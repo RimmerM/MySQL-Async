@@ -2,13 +2,14 @@ package com.rimmer.mysql.protocol.encoder
 
 import com.rimmer.mysql.protocol.constants.CommandType
 import io.netty.buffer.ByteBuf
+import io.netty.buffer.ByteBufAllocator
 import io.netty.buffer.Unpooled
 import java.nio.ByteOrder
 
 /** Creates a buffer used for writing MySQL packets. */
 fun packetBuffer(initialSize: Int = 1024): ByteBuf {
     // TODO: Use pooled direct buffers instead.
-    val buffer = Unpooled.buffer(initialSize).order(ByteOrder.LITTLE_ENDIAN)
+    val buffer = ByteBufAllocator.DEFAULT.buffer(initialSize).order(ByteOrder.LITTLE_ENDIAN)
 
     // Add space at the beginning for the final packet size. This is calculated afterwards.
     buffer.writeInt(0)
