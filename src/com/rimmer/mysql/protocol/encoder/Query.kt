@@ -47,6 +47,7 @@ fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>) {
     val types = ByteArray(typesSize)
 
     val bitmapOffset = buffer.writerIndex()
+    buffer.ensureWritable(bitmapSize + 1 + typesSize, true)
     buffer.writerIndex(bitmapOffset + bitmapSize + 1 + typesSize)
 
     // Fill each array with data.
@@ -56,7 +57,6 @@ fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>) {
             bitmap[i / 8] = (bitmap[i / 8].toInt() or (1 shl (i and 7))).toByte()
             types[i * 2 + 1] = Type.NULL.toByte()
         } else {
-            buffer.ensureWritable(512, true)
             encodeBinary(buffer, types, i, value)
         }
     }
