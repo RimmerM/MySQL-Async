@@ -96,7 +96,7 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when
     Type.YEAR -> decodeShort(buffer, targetType)
     Type.NEWDATE -> decodeDate(buffer, targetType)
     Type.VARCHAR -> decodeString(buffer, targetType)
-    Type.BIT -> decodeString(buffer, targetType)
+    Type.BIT -> decodeBit(buffer, targetType)
     Type.NEWDECIMAL -> decodeDecimal(buffer, targetType)
     Type.ENUM -> decodeString(buffer, targetType)
     Type.SET -> decodeString(buffer, targetType)
@@ -158,6 +158,27 @@ fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === String::class.javaObjectType) {
         return string
     } else {
+        throw SqlException(0, "", "Unknown target type $targetType")
+    }
+}
+
+fun decodeBit(buffer: ByteBuf, targetType: Class<*>?): Any {
+    val length = buffer.readLengthEncoded().toInt()
+    if(targetType === null || targetType === ByteArray::class.java) {
+        val bytes = ByteArray(length)
+        buffer.readBytes(bytes)
+        return bytes
+    } else {
+        var result = 0L
+        for(i in 0..length - 1) {
+            result = result or (buffer.readByte().toLong() shl (8*i))
+        }
+
+        if(targetType === Long::class.javaObjectType) return result
+        if(targetType === Int::class.javaObjectType) return result.toInt()
+        if(targetType === Short::class.javaObjectType) return result.toShort()
+        if(targetType === Byte::class.javaObjectType) return result.toByte()
+
         throw SqlException(0, "", "Unknown target type $targetType")
     }
 }
