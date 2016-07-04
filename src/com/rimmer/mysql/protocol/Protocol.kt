@@ -337,8 +337,9 @@ class ProtocolHandler(
     /** Fails a prepare-command and clears state. */
     private fun failPrepare(cause: Throwable?) {
         clearState()
-        prepareCallback?.invoke(null, cause)
+        val callback = prepareCallback
         prepareCallback = null
+        callback?.invoke(null, cause)
     }
 
     /** Finishes a prepare-command with buffered data and clears state. */
@@ -347,8 +348,9 @@ class ProtocolHandler(
         statementCache[prepareString] = statement
 
         clearState()
-        prepareCallback?.invoke(statement, null)
+        val callback = prepareCallback
         prepareCallback = null
+        callback?.invoke(statement, null)
     }
 
     /** Fails a query-command and clears state. */
