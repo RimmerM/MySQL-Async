@@ -5,12 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.rimmer.mysql</groupId>
-    <artifactId>MySQL-NonBlocking</artifactId>
+    <artifactId>MySQL-Async</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <properties>
         <kotlin.version>1.0.3</kotlin.version>
-        <yttrium.version>-SNAPSHOT</yttrium.version>
     </properties>
 
     <build>
@@ -97,11 +96,6 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.RimmerM.Yttrium</groupId>
-            <artifactId>Yttrium-Core</artifactId>
-            <version>${yttrium.version}</version>
         </dependency>
     </dependencies>
 </project>
