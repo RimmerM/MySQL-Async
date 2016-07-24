@@ -1,9 +1,9 @@
 package com.rimmer.mysql.protocol.encoder
 
+import com.rimmer.mysql.protocol.CodecExtender
 import com.rimmer.mysql.protocol.constants.CommandType
 import com.rimmer.mysql.protocol.constants.Type
 import com.rimmer.mysql.protocol.decoder.writeLengthEncoded
-import com.rimmer.yttrium.ByteString
 import io.netty.buffer.ByteBuf
 import org.joda.time.DateTime
 import org.joda.time.LocalDate
@@ -24,18 +24,18 @@ fun writePrepareStatement(statement: String): ByteBuf {
     return buffer
 }
 
-fun writeQuery(statementId: Int, parameters: List<Any?>): ByteBuf {
+fun writeQuery(statementId: Int, parameters: List<Any?>, codec: CodecExtender?): ByteBuf {
     val buffer = packetBuffer()
     buffer.writeByte(CommandType.STMT_EXECUTE)
     buffer.writeInt(statementId)
     buffer.writeByte(0) // CURSOR_TYPE_NO_CURSOR
     buffer.writeInt(1) // The iteration count; always 1.
-    writeBinaryParameters(buffer, parameters)
+    writeBinaryParameters(buffer, parameters, codec)
     writePacketLength(buffer)
     return buffer
 }
 
-fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>) {
+fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>, codec: CodecExtender?) {
     // Create a bitmap indicating which parameter values are null.
     val count = values.size
     if(count < 1) return
@@ -57,7 +57,7 @@ fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>) {
             bitmap[i / 8] = (bitmap[i / 8].toInt() or (1 shl (i and 7))).toByte()
             types[i * 2 + 1] = Type.NULL.toByte()
         } else {
-            encodeBinary(buffer, types, i, value)
+            encodeBinary(buffer, types, i, value, codec)
         }
     }
 
@@ -78,13 +78,12 @@ fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>) {
     writePacketLength(buffer)
 }
 
-fun encodeBinary(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
+fun encodeBinary(buffer: ByteBuf, types: ByteArray, index: Int, value: Any, codec: CodecExtender?) {
     when(value) {
         // Ordered by likely usage frequency.
         // If most calls do only a few comparisons this is a lot faster than a map structure.
         is Int -> encodeInt(buffer, types, index, value)
         is Long -> encodeLong(buffer, types, index, value)
-        is ByteString -> encodeByteString(buffer, types, index, value)
         is String, is BigInteger, is BigDecimal -> encodeString(buffer, types, index, value)
         is Boolean -> encodeBoolean(buffer, types, index, value)
         is DateTime -> encodeDateTime(buffer, types, index, value)
@@ -103,6 +102,7 @@ fun encodeBinary(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
         is LocalDate -> encodeLocalDate(buffer, types, index, value)
         is LocalTime -> encodeLocalTime(buffer, types, index, value)
         is java.time.LocalDate -> encodeJavaLocalDate(buffer, types, index, value)
+        else -> codec?.encode(buffer, types, index, value)
     }
 }
 
@@ -112,12 +112,6 @@ fun encodeString(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {
     val bytes = string.toByteArray(Charsets.UTF_8)
     buffer.writeLengthEncoded(bytes.size)
     buffer.writeBytes(bytes)
-}
-
-fun encodeByteString(buffer: ByteBuf, types: ByteArray, index: Int, value: ByteString) {
-    types[index * 2] = Type.VARCHAR.toByte()
-    buffer.writeLengthEncoded(value.size)
-    value.write(buffer)
 }
 
 fun encodeByte(buffer: ByteBuf, types: ByteArray, index: Int, value: Byte) {

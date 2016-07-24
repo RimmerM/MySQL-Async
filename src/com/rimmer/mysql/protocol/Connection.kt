@@ -1,6 +1,8 @@
 package com.rimmer.mysql.protocol
 
+import com.rimmer.mysql.protocol.decoder.unknownTarget
 import io.netty.bootstrap.Bootstrap
+import io.netty.buffer.ByteBuf
 import io.netty.buffer.PooledByteBufAllocator
 import io.netty.channel.*
 import io.netty.channel.epoll.Epoll
@@ -44,6 +46,21 @@ interface Connection {
 /** Represents a listener to executed queries which will be called for each query. */
 interface QueryListener {
     fun onQuery(id: Long, query: String, result: QueryResult?, error: Throwable?)
+}
+
+/** A codec helper that can be provided to support encoding and decoding custom types. */
+interface CodecExtender {
+    fun encode(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {}
+    fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeByte(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeShort(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeInt(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+    fun decodeBit(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
 }
 
 /** Contains the result data for a single row. */
@@ -96,6 +113,7 @@ fun connect(
     database: String,
     listener: QueryListener? = null,
     useNative: Boolean = false,
+    codec: CodecExtender? = null,
     f: (Connection?, Throwable?) -> Unit
 ) {
     val channelType = if(useNative && Epoll.isAvailable()) EpollSocketChannel::class.java else NioSocketChannel::class.java
@@ -109,7 +127,7 @@ fun connect(
         .channel(channelType)
         .handler(object: ChannelInitializer<Channel>() {
             override fun initChannel(channel: Channel) {
-                channel.pipeline().addLast(ProtocolHandler(user, password, database, f, listener))
+                channel.pipeline().addLast(ProtocolHandler(user, password, database, f, listener, codec))
             }
         })
 

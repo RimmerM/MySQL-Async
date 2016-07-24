@@ -1,15 +1,16 @@
 package com.rimmer.mysql.protocol.decoder
 
+import com.rimmer.mysql.protocol.CodecExtender
 import com.rimmer.mysql.protocol.SqlException
 import com.rimmer.mysql.protocol.constants.Type
-import com.rimmer.yttrium.ByteString
-import com.rimmer.yttrium.LocalByteString
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.ByteBufUtil
 import org.joda.time.DateTime
 import org.joda.time.chrono.ISOChronology
 import java.math.BigDecimal
 import java.util.*
+
+fun unknownTarget(targetType: Class<*>?) = SqlException(0, "", "Unknown target type $targetType")
 
 /** Parses a prepare-statement result from the server. */
 inline fun readPrepareStatement(packet: ByteBuf, f: (statementId: Int, columnCount: Int, paramCount: Int, warningCount: Int) -> Unit) {
@@ -48,7 +49,14 @@ inline fun readColumnDefinition(packet: ByteBuf, f: (catalog: String, database: 
 }
 
 /** Parses a result row from the server. */
-inline fun readResultRow(packet: ByteBuf, columns: Int, types: ShortArray, targetTypes: List<Class<*>>?, f: (column: Int, value: Any?) -> Unit) {
+inline fun readResultRow(
+    packet: ByteBuf,
+    columns: Int,
+    types: ShortArray,
+    targetTypes: List<Class<*>>?,
+    codec: CodecExtender?,
+    f: (column: Int, value: Any?) -> Unit
+) {
     // Skip the type marker.
     packet.skipBytes(1)
 
@@ -65,7 +73,7 @@ inline fun readResultRow(packet: ByteBuf, columns: Int, types: ShortArray, targe
         if(packet.getUnsignedByte(bitmapStart + bitmapIndex).toInt() and bitMask != 0) {
             f(column, null)
         } else {
-            f(column, decodeBinary(packet, types[column].toInt(), targetTypes?.get(column)))
+            f(column, decodeBinary(packet, types[column].toInt(), targetTypes?.get(column), codec))
         }
 
         column++
@@ -77,47 +85,42 @@ inline fun readResultRow(packet: ByteBuf, columns: Int, types: ShortArray, targe
     }
 }
 
-fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?): Any? = when(type) {
+fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?, codec: CodecExtender?): Any? = when(type) {
     // Ordered by likely usage frequency.
     // If most calls do only a few comparisons this is a lot faster than a map structure.
-    Type.DECIMAL -> decodeDecimal(buffer, targetType)
-    Type.TINY -> decodeByte(buffer, targetType)
-    Type.SHORT -> decodeShort(buffer, targetType)
-    Type.LONG -> decodeInt(buffer, targetType)
-    Type.FLOAT -> decodeFloat(buffer, targetType)
-    Type.DOUBLE -> decodeDouble(buffer, targetType)
+    Type.DECIMAL -> decodeDecimal(buffer, targetType, codec)
+    Type.TINY -> decodeByte(buffer, targetType, codec)
+    Type.SHORT -> decodeShort(buffer, targetType, codec)
+    Type.LONG -> decodeInt(buffer, targetType, codec)
+    Type.FLOAT -> decodeFloat(buffer, targetType, codec)
+    Type.DOUBLE -> decodeDouble(buffer, targetType, codec)
     Type.NULL -> null
-    Type.TIMESTAMP -> decodeDate(buffer, targetType)
-    Type.LONGLONG -> decodeLong(buffer, targetType)
-    Type.INT24 -> decodeInt(buffer, targetType)
-    Type.DATE -> decodeDate(buffer, targetType)
-    Type.TIME -> decodeDate(buffer, targetType)
-    Type.DATETIME -> decodeDate(buffer, targetType)
-    Type.YEAR -> decodeShort(buffer, targetType)
-    Type.NEWDATE -> decodeDate(buffer, targetType)
-    Type.VARCHAR -> decodeString(buffer, targetType)
-    Type.BIT -> decodeBit(buffer, targetType)
-    Type.NEWDECIMAL -> decodeDecimal(buffer, targetType)
-    Type.ENUM -> decodeString(buffer, targetType)
-    Type.SET -> decodeString(buffer, targetType)
-    Type.TINY_BLOB -> decodeString(buffer, targetType)
-    Type.MEDIUM_BLOB -> decodeString(buffer, targetType)
-    Type.LONG_BLOB -> decodeString(buffer, targetType)
-    Type.BLOB -> decodeString(buffer, targetType)
-    Type.VAR_STRING -> decodeString(buffer, targetType)
-    Type.STRING -> decodeString(buffer, targetType)
-    Type.GEOMETRY -> decodeString(buffer, targetType)
+    Type.TIMESTAMP -> decodeDate(buffer, targetType, codec)
+    Type.LONGLONG -> decodeLong(buffer, targetType, codec)
+    Type.INT24 -> decodeInt(buffer, targetType, codec)
+    Type.DATE -> decodeDate(buffer, targetType, codec)
+    Type.TIME -> decodeDate(buffer, targetType, codec)
+    Type.DATETIME -> decodeDate(buffer, targetType, codec)
+    Type.YEAR -> decodeShort(buffer, targetType, codec)
+    Type.NEWDATE -> decodeDate(buffer, targetType, codec)
+    Type.VARCHAR -> decodeString(buffer, targetType, codec)
+    Type.BIT -> decodeBit(buffer, targetType, codec)
+    Type.NEWDECIMAL -> decodeDecimal(buffer, targetType, codec)
+    Type.ENUM -> decodeString(buffer, targetType, codec)
+    Type.SET -> decodeString(buffer, targetType, codec)
+    Type.TINY_BLOB -> decodeString(buffer, targetType, codec)
+    Type.MEDIUM_BLOB -> decodeString(buffer, targetType, codec)
+    Type.LONG_BLOB -> decodeString(buffer, targetType, codec)
+    Type.BLOB -> decodeString(buffer, targetType, codec)
+    Type.VAR_STRING -> decodeString(buffer, targetType, codec)
+    Type.STRING -> decodeString(buffer, targetType, codec)
+    Type.GEOMETRY -> decodeString(buffer, targetType, codec)
     else -> throw SqlException(0, "", "Unknown result type $type")
 }
 
-fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeString(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     if(targetType === null || targetType === String::class.javaObjectType) {
         return buffer.readLengthEncodedString()
-    } else if(targetType === ByteString::class.java) {
-        val length = buffer.readLengthEncoded().toInt()
-        val bytes = ByteArray(length)
-        buffer.readBytes(bytes)
-        return LocalByteString(bytes)
     } else if(targetType === ByteArray::class.javaObjectType) {
         val length = buffer.readLengthEncoded().toInt()
         val bytes = ByteArray(length)
@@ -127,11 +130,11 @@ fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any {
         val length = buffer.readLengthEncoded().toInt()
         return buffer.readBytes(length)
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeString(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val string = buffer.readLengthEncodedString()
 
     if(targetType === null || targetType === Double::class.javaObjectType) {
@@ -158,11 +161,11 @@ fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === String::class.javaObjectType) {
         return string
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeDecimal(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeBit(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeBit(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val length = buffer.readLengthEncoded().toInt()
     if(targetType === null || targetType === ByteArray::class.java) {
         val bytes = ByteArray(length)
@@ -179,11 +182,11 @@ fun decodeBit(buffer: ByteBuf, targetType: Class<*>?): Any {
         if(targetType === Short::class.javaObjectType) return result.toShort()
         if(targetType === Byte::class.javaObjectType) return result.toByte()
 
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeBit(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeLong(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = ByteBufUtil.swapLong(buffer.readLong())
 
     return if(targetType === null || targetType === Long::class.javaObjectType) {
@@ -193,11 +196,11 @@ fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Boolean::class.javaObjectType) {
         v != 0L
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeLong(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeInt(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeInt(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = ByteBufUtil.swapInt(buffer.readInt())
 
     return if(targetType === null || targetType === Int::class.javaObjectType) {
@@ -207,11 +210,11 @@ fun decodeInt(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Boolean::class.javaObjectType) {
         v != 0
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeInt(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeShort(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeShort(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = ByteBufUtil.swapShort(buffer.readShort())
 
     return if(targetType === null || targetType === Short::class.javaObjectType) {
@@ -223,11 +226,11 @@ fun decodeShort(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Boolean::class.javaObjectType) {
         v != 0.toShort()
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeShort(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeByte(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeByte(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = buffer.readByte()
 
     return if(targetType === null || targetType === Byte::class.javaObjectType) {
@@ -241,11 +244,11 @@ fun decodeByte(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Short::class.javaObjectType) {
         v.toShort()
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeByte(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = java.lang.Float.intBitsToFloat(ByteBufUtil.swapInt(buffer.readInt()))
 
     return if(targetType === null || targetType === Float::class.javaObjectType) {
@@ -257,11 +260,11 @@ fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Double::class.javaObjectType) {
         v.toDouble()
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeFloat(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?): Any {
+fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = java.lang.Double.longBitsToDouble(ByteBufUtil.swapLong(buffer.readLong()))
 
     return if(targetType === null || targetType === Double::class.javaObjectType) {
@@ -273,11 +276,11 @@ fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?): Any {
     } else if(targetType === Float::class.javaObjectType) {
         v.toFloat()
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeDouble(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 
-fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any? {
+fun decodeDate(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any? {
     val length = buffer.readByte().toInt()
     var year = 0
     var month = 0
@@ -319,6 +322,6 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?): Any? {
     } else if(targetType === Long::class.javaObjectType) {
         timestamp
     } else {
-        throw SqlException(0, "", "Unknown target type $targetType")
+        return codec?.decodeDate(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }

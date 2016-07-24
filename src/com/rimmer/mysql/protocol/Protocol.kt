@@ -20,7 +20,8 @@ class ProtocolHandler(
     val password: String,
     val database: String,
     var connectCallback: ((Connection?, Throwable?) -> Unit)?,
-    val listener: QueryListener?
+    val listener: QueryListener?,
+    val codec: CodecExtender?
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
     private var queryCallback: ((QueryResult?, Throwable?) -> Unit)? = null
@@ -154,7 +155,7 @@ class ProtocolHandler(
         queryStart = System.nanoTime()
         requestedTypes = targetTypes
         insideQuery = true
-        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values), currentContext!!.voidPromise())
+        currentContext!!.writeAndFlush(writeQuery(statement.statementId, values, codec), currentContext!!.voidPromise())
     }
 
     /**
@@ -212,7 +213,7 @@ class ProtocolHandler(
      */
     fun onRow(packet: ByteBuf) {
         val row = Array<Any?>(totalColumnCount) {null}
-        readResultRow(packet, totalColumnCount, columnTypes, requestedTypes) {
+        readResultRow(packet, totalColumnCount, columnTypes, requestedTypes, codec) {
             column, value -> row[column] = value
         }
 
