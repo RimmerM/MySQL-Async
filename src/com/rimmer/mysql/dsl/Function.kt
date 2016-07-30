@@ -74,6 +74,7 @@ class Substring(val pivot: Expression, val start: TypedExpression<Int>, val leng
         start.format(builder)
         builder.append(',')
         length.format(builder)
+        builder.append(')')
     }
 }
 
