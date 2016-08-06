@@ -18,8 +18,8 @@ class QueryBuilder() {
         string.append('?')
     }
 
-    fun run(c: Connection, targetTypes: List<Class<*>>? = null, queryId: Long = 0L, f: (QueryResult?, Throwable?) -> Unit) {
-        c.query(string.toString(), args, targetTypes, queryId, f)
+    fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit) {
+        c.query(string.toString(), args, targetTypes, listenerData, f)
     }
 
     override fun toString() = string.toString()

@@ -14,7 +14,7 @@ class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boo
         values.put(column, value)
     }
 
-    override fun run(c: Connection, queryId: Long, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
 
         builder.append("INSERT ")
@@ -38,7 +38,7 @@ class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boo
             }
         }
 
-        builder.run(c, null, queryId, f)
+        builder.run(c, null, listenerData, f)
     }
 }
 
@@ -67,7 +67,7 @@ class BatchInsert(val table: Table, val isIgnore: Boolean = false, val isReplace
         batch.add(value)
     }
 
-    override fun run(c: Connection, queryId: Long, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
         if(values.isEmpty()) {
             f(QueryResult(0, 0, "", 0, null), null)
             return
@@ -100,6 +100,6 @@ class BatchInsert(val table: Table, val isIgnore: Boolean = false, val isReplace
             }
         }
 
-        builder.run(c, null, queryId, f)
+        builder.run(c, null, listenerData, f)
     }
 }

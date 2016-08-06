@@ -6,13 +6,13 @@ import com.rimmer.mysql.protocol.QueryResult
 
 interface Query {
     /** Runs this query on the provided connection. */
-    fun run(c: Connection, queryId: Long = 0L, f: (QueryResult?, Throwable?) -> Unit)
+    fun run(c: Connection, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit)
 
     /** Fetches a connection from the pool and runs this query. */
-    fun run(pool: ConnectionPool, queryId: Long = 0L, f: (QueryResult?, Throwable?) -> Unit) {
+    fun run(pool: ConnectionPool, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit) {
         pool.get { c, e ->
             if(c == null) f(null, e)
-            else run(c, queryId) { r, e ->
+            else run(c, listenerData) { r, e ->
                 c.disconnect()
                 f(r, e)
             }
