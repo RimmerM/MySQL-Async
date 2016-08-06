@@ -2,6 +2,7 @@ package com.rimmer.mysql.dsl
 
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
+import com.rimmer.mysql.protocol.decoder.intType
 import java.util.*
 
 class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = false): Expression(), Query {
@@ -67,7 +68,7 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
 
     override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
-        val fields = if(isCount) listOf(Int::class.javaObjectType) else set.fields.map {it.type}
+        val fields = if(isCount) listOf(intType) else set.fields.map {it.type}
         format(builder)
         builder.run(c, fields, listenerData, f)
     }

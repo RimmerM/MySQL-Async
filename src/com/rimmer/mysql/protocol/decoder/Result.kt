@@ -10,6 +10,18 @@ import org.joda.time.chrono.ISOChronology
 import java.math.BigDecimal
 import java.util.*
 
+val booleanType = Boolean::class.javaObjectType
+val byteType = Byte::class.javaObjectType
+val charType = Char::class.javaObjectType
+val shortType = Short::class.javaObjectType
+val intType = Int::class.javaObjectType
+val longType = Long::class.javaObjectType
+val floatType = Float::class.javaObjectType
+val doubleType = Double::class.javaObjectType
+val dateType = Date::class.java
+val dateTimeType = DateTime::class.java
+val stringType = String::class.java
+
 fun unknownTarget(targetType: Class<*>?) = SqlException(0, "", "Unknown target type $targetType")
 
 /** Parses a prepare-statement result from the server. */
@@ -325,14 +337,3 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): A
         return codec?.decodeDate(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
-
-private val booleanType = Boolean::class.javaObjectType
-private val byteType = Byte::class.javaObjectType
-private val shortType = Short::class.javaObjectType
-private val intType = Int::class.javaObjectType
-private val longType = Long::class.javaObjectType
-private val floatType = Float::class.javaObjectType
-private val doubleType = Double::class.javaObjectType
-private val dateType = Date::class.java
-private val dateTimeType = DateTime::class.java
-private val stringType = String::class.java

@@ -3,6 +3,7 @@ package com.rimmer.mysql.dsl
 import com.rimmer.mysql.pool.ConnectionPool
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
+import com.rimmer.mysql.protocol.decoder.intType
 
 interface Query {
     /** Runs this query on the provided connection. */
@@ -73,7 +74,7 @@ fun Column<*>.distinctCount() = Count(this, true)
 fun <T> Column<T>.distinct() = Distinct(this, type)
 fun <T> Column<T>.min() = Min(this, type)
 fun <T> Column<T>.max() = Max(this, type)
-fun <T> Column<T>.sum() = Sum(this, Int::class.javaObjectType)
+fun <T> Column<T>.sum() = Sum(this, intType)
 fun <T: String?> Column<T>.trim() = Trim(this)
 fun <T: String?> Column<T>.substring(start: Int, length: Int) = Substring(this, literal(start), literal(length))
 

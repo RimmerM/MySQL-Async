@@ -1,11 +1,13 @@
 package com.rimmer.mysql.dsl
 
+import com.rimmer.mysql.protocol.decoder.floatType
+import com.rimmer.mysql.protocol.decoder.longType
 import org.joda.time.DateTime
 import java.util.*
 
 abstract class Function<T>(type: Class<T>): TypedExpression<T>(type, false)
 
-class Count(val pivot: Expression, val distinct: Boolean = false): Function<Long>(Long::class.javaObjectType) {
+class Count(val pivot: Expression, val distinct: Boolean = false): Function<Long>(longType) {
     override fun format(builder: QueryBuilder) {
         builder.append("COUNT(")
         if(distinct) {
@@ -122,7 +124,7 @@ class Now: Function<DateTime>(DateTime::class.java) {
     }
 }
 
-class Rand: Function<Float>(Float::class.javaObjectType) {
+class Rand: Function<Float>(floatType) {
     override fun format(builder: QueryBuilder) {
         builder.append("RAND()")
     }

@@ -1,5 +1,6 @@
 package com.rimmer.mysql.dsl
 
+import com.rimmer.mysql.protocol.decoder.*
 import io.netty.buffer.ByteBuf
 import org.joda.time.DateTime
 import java.util.*
@@ -29,55 +30,55 @@ open class Table(name: String? = null): ColumnSet {
     override val columns = ArrayList<Column<*>>()
 
     fun integer(name: String): Column<Int> {
-        val answer = Column(this, name, Int::class.javaObjectType)
+        val answer = Column(this, name, intType)
         columns.add(answer)
         return answer
     }
 
     fun short(name: String): Column<Short> {
-        val answer = Column(this, name, Short::class.javaObjectType)
+        val answer = Column(this, name, shortType)
         columns.add(answer)
         return answer
     }
 
     fun char(name: String): Column<Char> {
-        val answer = Column(this, name, Char::class.javaObjectType)
+        val answer = Column(this, name, charType)
         columns.add(answer)
         return answer
     }
 
     fun float(name: String): Column<Float> {
-        val answer = Column(this, name, Float::class.javaObjectType)
+        val answer = Column(this, name, floatType)
         columns.add(answer)
         return answer
     }
 
     fun long(name: String): Column<Long> {
-        val answer = Column(this, name, Long::class.javaObjectType)
+        val answer = Column(this, name, longType)
         columns.add(answer)
         return answer
     }
 
     fun date(name: String): Column<DateTime> {
-        val answer = Column(this, name, DateTime::class.javaObjectType)
+        val answer = Column(this, name, dateTimeType)
         columns.add(answer)
         return answer
     }
 
     fun bool(name: String): Column<Boolean> {
-        val answer = Column(this, name, Boolean::class.javaObjectType)
+        val answer = Column(this, name, booleanType)
         columns.add(answer)
         return answer
     }
 
     fun blob(name: String): Column<ByteArray> {
-        val answer = Column(this, name, ByteArray::class.javaObjectType)
+        val answer = Column(this, name, ByteArray::class.java)
         columns.add(answer)
         return answer
     }
 
     fun text(name: String): Column<String> {
-        val answer = Column(this, name, String::class.javaObjectType)
+        val answer = Column(this, name, stringType)
         columns.add(answer)
         return answer
     }

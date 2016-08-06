@@ -1,5 +1,7 @@
 package com.rimmer.mysql.dsl
 
+import com.rimmer.mysql.protocol.decoder.booleanType
+
 abstract class Op<T>(type: Class<T>, nullable: Boolean): TypedExpression<T>(type, nullable)
 
 class LiteralOp<T: Any>(val value: T): TypedExpression<T>(value.javaClass, false) {
@@ -28,7 +30,7 @@ class OrOp(val lhs: TypedExpression<Boolean>, val rhs: TypedExpression<Boolean>)
     }
 }
 
-class Exists(val query: Select): Op<Boolean>(Boolean::class.javaObjectType, false) {
+class Exists(val query: Select): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("EXISTS (")
         query.format(builder)
@@ -36,7 +38,7 @@ class Exists(val query: Select): Op<Boolean>(Boolean::class.javaObjectType, fals
     }
 }
 
-class NotExists(val query: Select): Op<Boolean>(Boolean::class.javaObjectType, false) {
+class NotExists(val query: Select): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         builder.append("NOT EXISTS (")
         query.format(builder)
@@ -44,21 +46,21 @@ class NotExists(val query: Select): Op<Boolean>(Boolean::class.javaObjectType, f
     }
 }
 
-class IsNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.javaObjectType, false) {
+class IsNullOp(val lhs: Expression): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append("IS NULL")
     }
 }
 
-class IsNotNullOp(val lhs: Expression): Op<Boolean>(Boolean::class.javaObjectType, false) {
+class IsNotNullOp(val lhs: Expression): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append("IS NOT NULL")
     }
 }
 
-class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(Boolean::class.javaObjectType, false) {
+class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         val iterator = list.iterator()
         val hasFirst = iterator.hasNext()
@@ -83,7 +85,7 @@ class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList:
     }
 }
 
-class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>(Boolean::class.javaObjectType, false) {
+class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         lhs.format(builder)
         builder.append(" BETWEEN (")
@@ -94,7 +96,7 @@ class Between(val lhs: Expression, val from: LiteralOp<*>, val to: LiteralOp<*>)
     }
 }
 
-open class CompareOp(val lhs: Expression, val rhs: Expression, val op: String): Op<Boolean>(Boolean::class.javaObjectType, false) {
+open class CompareOp(val lhs: Expression, val rhs: Expression, val op: String): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         builder.append('(')
         lhs.format(builder)
