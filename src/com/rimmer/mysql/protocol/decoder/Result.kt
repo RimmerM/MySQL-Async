@@ -119,9 +119,9 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?, codec: Codec
 }
 
 fun decodeString(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
-    if(targetType === null || targetType === String::class.javaObjectType) {
+    if(targetType === null || targetType === stringType) {
         return buffer.readLengthEncodedString()
-    } else if(targetType === ByteArray::class.javaObjectType) {
+    } else if(targetType === ByteArray::class.java) {
         val length = buffer.readLengthEncoded().toInt()
         val bytes = ByteArray(length)
         buffer.readBytes(bytes)
@@ -137,28 +137,28 @@ fun decodeString(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?):
 fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val string = buffer.readLengthEncodedString()
 
-    if(targetType === null || targetType === Double::class.javaObjectType) {
+    if(targetType === null || targetType === doubleType) {
         try {
             return java.lang.Double.parseDouble(string)
         } catch(e: Throwable) {
             return 0.0
         }
-    } else if(targetType === Int::class.javaObjectType || targetType === Long::class.javaObjectType) {
+    } else if(targetType === intType || targetType === longType) {
         try {
             val v = java.lang.Long.parseLong(string)
-            return if(targetType === Int::class.javaObjectType) v.toInt() else v
+            return if(targetType === intType) v.toInt() else v
         } catch(e: Throwable) {
-            return if(targetType === Int::class.javaObjectType) 0 else 0L
+            return if(targetType === intType) 0 else 0L
         }
-    } else if(targetType === Float::class.javaObjectType) {
+    } else if(targetType === floatType) {
         try {
             return java.lang.Float.parseFloat(string)
         } catch(e: Throwable) {
             return 0f
         }
-    } else if(targetType === BigDecimal::class.javaObjectType) {
+    } else if(targetType === BigDecimal::class.java) {
         return BigDecimal(string)
-    } else if(targetType === String::class.javaObjectType) {
+    } else if(targetType === stringType) {
         return string
     } else {
         return codec?.decodeDecimal(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -177,10 +177,10 @@ fun decodeBit(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
             result = result or (buffer.readByte().toLong() shl (8*i))
         }
 
-        if(targetType === Long::class.javaObjectType) return result
-        if(targetType === Int::class.javaObjectType) return result.toInt()
-        if(targetType === Short::class.javaObjectType) return result.toShort()
-        if(targetType === Byte::class.javaObjectType) return result.toByte()
+        if(targetType === longType) return result
+        if(targetType === intType) return result.toInt()
+        if(targetType === shortType) return result.toShort()
+        if(targetType === byteType) return result.toByte()
 
         return codec?.decodeBit(buffer, targetType) ?: throw unknownTarget(targetType)
     }
@@ -189,11 +189,11 @@ fun decodeBit(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
 fun decodeLong(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = ByteBufUtil.swapLong(buffer.readLong())
 
-    return if(targetType === null || targetType === Long::class.javaObjectType) {
+    return if(targetType === null || targetType === longType) {
         v
-    } else if(targetType === Int::class.javaObjectType) {
+    } else if(targetType === intType) {
         v.toInt()
-    } else if(targetType === Boolean::class.javaObjectType) {
+    } else if(targetType === booleanType) {
         v != 0L
     } else {
         return codec?.decodeLong(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -203,11 +203,11 @@ fun decodeLong(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): A
 fun decodeInt(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = ByteBufUtil.swapInt(buffer.readInt())
 
-    return if(targetType === null || targetType === Int::class.javaObjectType) {
+    return if(targetType === null || targetType === intType) {
         v
-    } else if(targetType === Long::class.javaObjectType) {
+    } else if(targetType === longType) {
         v.toLong()
-    } else if(targetType === Boolean::class.javaObjectType) {
+    } else if(targetType === booleanType) {
         v != 0
     } else {
         return codec?.decodeInt(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -217,13 +217,13 @@ fun decodeInt(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
 fun decodeShort(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = ByteBufUtil.swapShort(buffer.readShort())
 
-    return if(targetType === null || targetType === Short::class.javaObjectType) {
+    return if(targetType === null || targetType === shortType) {
         v
-    } else if(targetType === Int::class.javaObjectType) {
+    } else if(targetType === intType) {
         v.toInt()
-    } else if(targetType === Long::class.javaObjectType) {
+    } else if(targetType === longType) {
         v.toLong()
-    } else if(targetType === Boolean::class.javaObjectType) {
+    } else if(targetType === booleanType) {
         v != 0.toShort()
     } else {
         return codec?.decodeShort(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -233,15 +233,15 @@ fun decodeShort(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): 
 fun decodeByte(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = buffer.readByte()
 
-    return if(targetType === null || targetType === Byte::class.javaObjectType) {
+    return if(targetType === null || targetType === byteType) {
         v
-    } else if(targetType === Boolean::class.javaObjectType) {
+    } else if(targetType === booleanType) {
         v != 0.toByte()
-    } else if(targetType === Int::class.javaObjectType) {
+    } else if(targetType === intType) {
         v.toInt()
-    } else if(targetType === Long::class.javaObjectType) {
+    } else if(targetType === longType) {
         v.toLong()
-    } else if(targetType === Short::class.javaObjectType) {
+    } else if(targetType === shortType) {
         v.toShort()
     } else {
         return codec?.decodeByte(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -251,13 +251,13 @@ fun decodeByte(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): A
 fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = java.lang.Float.intBitsToFloat(ByteBufUtil.swapInt(buffer.readInt()))
 
-    return if(targetType === null || targetType === Float::class.javaObjectType) {
+    return if(targetType === null || targetType === floatType) {
         v
-    } else if(targetType === Int::class.javaObjectType) {
+    } else if(targetType === intType) {
         v.toInt()
-    } else if(targetType === Long::class.javaObjectType) {
+    } else if(targetType === longType) {
         v.toLong()
-    } else if(targetType === Double::class.javaObjectType) {
+    } else if(targetType === doubleType) {
         v.toDouble()
     } else {
         return codec?.decodeFloat(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -267,13 +267,13 @@ fun decodeFloat(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): 
 fun decodeDouble(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val v = java.lang.Double.longBitsToDouble(ByteBufUtil.swapLong(buffer.readLong()))
 
-    return if(targetType === null || targetType === Double::class.javaObjectType) {
+    return if(targetType === null || targetType === doubleType) {
         v
-    } else if(targetType === Int::class.javaObjectType) {
+    } else if(targetType === intType) {
         v.toInt()
-    } else if(targetType === Long::class.javaObjectType) {
+    } else if(targetType === longType) {
         v.toLong()
-    } else if(targetType === Float::class.javaObjectType) {
+    } else if(targetType === floatType) {
         v.toFloat()
     } else {
         return codec?.decodeDouble(buffer, targetType) ?: throw unknownTarget(targetType)
@@ -315,13 +315,24 @@ fun decodeDate(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): A
         chronology.getDateTimeMillis(year, month, day, hour, minute, second, ms)
     }
 
-    return if(targetType === null || targetType === DateTime::class.javaObjectType) {
+    return if(targetType === null || targetType === dateTimeType) {
         DateTime(timestamp, chronology)
-    } else if(targetType === Date::class.javaObjectType) {
+    } else if(targetType === dateType) {
         Date(timestamp)
-    } else if(targetType === Long::class.javaObjectType) {
+    } else if(targetType === longType) {
         timestamp
     } else {
         return codec?.decodeDate(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
+
+private val booleanType = Boolean::class.javaObjectType
+private val byteType = Byte::class.javaObjectType
+private val shortType = Short::class.javaObjectType
+private val intType = Int::class.javaObjectType
+private val longType = Long::class.javaObjectType
+private val floatType = Float::class.javaObjectType
+private val doubleType = Double::class.javaObjectType
+private val dateType = Date::class.java
+private val dateTimeType = DateTime::class.java
+private val stringType = String::class.java
