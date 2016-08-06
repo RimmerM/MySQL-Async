@@ -77,8 +77,8 @@ class ProtocolHandler(
     /** The time at which the last query ended. */
     private var queryEnd = System.nanoTime()
 
-    /** The id of the current query being executed. */
-    private var queryId = 0L
+    /** Listener data for the current query. */
+    private var listenerData: Any? = null
 
     /** The query string currently being executed. */
     private var queryString = ""
@@ -102,9 +102,9 @@ class ProtocolHandler(
     override val idleTime: Long
         get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
 
-    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, id: Long, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any?, f: (QueryResult?, Throwable?) -> Unit) {
         queryCallback = f
-        queryId = id
+        listenerData = data
         queryString = query
 
         // Check if the statement was already in cache.
@@ -382,12 +382,12 @@ class ProtocolHandler(
         // The callback may change our state before returning, which is why the state needs to be final here.
         val f = queryCallback
         queryCallback = null
-        val id = queryId
-        queryId = 0L
+        val data = listenerData
+        listenerData = null
         val string = queryString
         queryString = ""
 
-        listener?.onQuery(id, string, result, error)
+        listener?.onQuery(data, string, result, error)
         f?.invoke(result, error)
     }
 

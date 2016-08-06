@@ -19,10 +19,10 @@ interface Connection {
      * @param query The query to perform, in prepared statement format.
      * @param values The parameters to send to the query.
      * @param targetTypes The types you want the query to return. If not set, the driver decides what types to return.
-     * @param id An identifier for this query which will be sent to any listeners.
+     * @param data Data for the query listener that will be associated with the query.
      * @return A query result object.
      */
-    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, id: Long = 0L, f: (QueryResult?, Throwable?) -> Unit)
+    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any? = null, f: (QueryResult?, Throwable?) -> Unit)
 
     /** Closes this connection. */
     fun disconnect()
@@ -45,7 +45,7 @@ interface Connection {
 
 /** Represents a listener to executed queries which will be called for each query. */
 interface QueryListener {
-    fun onQuery(id: Long, query: String, result: QueryResult?, error: Throwable?)
+    fun onQuery(data: Any?, query: String, result: QueryResult?, error: Throwable?)
 }
 
 /** A codec helper that can be provided to support encoding and decoding custom types. */
