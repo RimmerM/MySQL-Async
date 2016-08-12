@@ -21,7 +21,8 @@ class ProtocolHandler(
     val database: String,
     var connectCallback: ((Connection?, Throwable?) -> Unit)?,
     val listener: QueryListener?,
-    val codec: CodecExtender?
+    val codec: CodecExtender?,
+    val debugStatementAbove: Int = 0
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
     private var queryCallback: ((QueryResult?, Throwable?) -> Unit)? = null
@@ -85,6 +86,7 @@ class ProtocolHandler(
 
     /** Contains cached prepared statements. */
     private val statementCache = HashMap<String, Statement>()
+    private var lastStatementDebug = 0L
 
     /*
      * Connection interface implementation.
@@ -111,6 +113,17 @@ class ProtocolHandler(
         val statement = statementCache[query]
         if(statement === null) {
             // If not, we prepare it first.
+            if(debugStatementAbove > 0 && statementCache.size >= debugStatementAbove) {
+                val time = System.nanoTime()
+                if(time - lastStatementDebug > 5L * 60L * 1000L * 1000000L) {
+                    lastStatementDebug = time
+                    println("MySQL warning: ${statementCache.size} statements.")
+                    statementCache.forEach { query, statement ->
+                        println("   MySQL prepared statement: $query")
+                    }
+                }
+            }
+
             prepare(query) { s, t ->
                 if(s == null) {
                     failQuery(t)

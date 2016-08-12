@@ -114,6 +114,7 @@ fun connect(
     listener: QueryListener? = null,
     useNative: Boolean = false,
     codec: CodecExtender? = null,
+    debugStatementsAbove: Int = 0,
     f: (Connection?, Throwable?) -> Unit
 ) {
     val channelType = if(useNative && Epoll.isAvailable()) EpollSocketChannel::class.java else NioSocketChannel::class.java
@@ -127,7 +128,7 @@ fun connect(
         .channel(channelType)
         .handler(object: ChannelInitializer<Channel>() {
             override fun initChannel(channel: Channel) {
-                channel.pipeline().addLast(ProtocolHandler(user, password, database, f, listener, codec))
+                channel.pipeline().addLast(ProtocolHandler(user, password, database, f, listener, codec, debugStatementsAbove))
             }
         })
 
