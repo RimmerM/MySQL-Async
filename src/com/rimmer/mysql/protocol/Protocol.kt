@@ -138,12 +138,12 @@ class ProtocolHandler(
 
     override fun disconnect() {
         if(hasHandshake) {
+            hasHandshake = false
+            connectCallback = null
+
             val exception = SqlException(0, "", "Connection is being closed")
             failPrepare(exception)
             failQuery(exception)
-            clearState()
-            hasHandshake = false
-            connectCallback = null
 
             currentContext?.writeAndFlush(writeQuit())?.addListener {
                 currentContext!!.close()
@@ -441,6 +441,10 @@ class ProtocolHandler(
 
     // Called when the channel is closed.
     override fun channelInactive(context: ChannelHandlerContext) {
+        accumulator?.release()
+        accumulator = null
+        statementCache.clear()
+
         val exception = SqlException(0, "", "Connection is being closed")
         if(hasHandshake) {
             failPrepare(exception)

@@ -57,6 +57,7 @@ class SingleThreadPool(
                 connectionCount++
                 creator {c, e ->
                     if(c == null) {
+                        connectionCount--
                         f(null, e)
                     } else {
                         val pooled = PoolConnection(c, this)
@@ -93,6 +94,7 @@ class SingleThreadPool(
                 }
 
                 connection.connection.disconnect()
+                connections.remove(connection)
                 connectionCount--
                 get(f)
             } else {
@@ -125,9 +127,9 @@ class SingleThreadPool(
             val busy = config.maxBusyTime > 0 && c.busyTime > config.maxBusyTime
             val idle = config.maxIdleTime > 0 && c.idleTime > config.maxIdleTime
             if(busy || idle) {
-                connectionCount--
                 c.connection.disconnect()
                 connections.removeAt(i)
+                connectionCount--
 
                 if(config.debug) {
                     println("Closing idle MySQL connection $i")
