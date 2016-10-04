@@ -53,6 +53,12 @@ open class Table(name: String? = null): ColumnSet {
         return answer
     }
 
+    fun double(name: String): Column<Double> {
+        val answer = Column(this, name, doubleType)
+        columns.add(answer)
+        return answer
+    }
+
     fun long(name: String): Column<Long> {
         val answer = Column(this, name, longType)
         columns.add(answer)
