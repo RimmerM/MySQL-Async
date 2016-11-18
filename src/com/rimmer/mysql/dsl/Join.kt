@@ -10,36 +10,54 @@ enum class JoinType {
 }
 
 fun Table.join(
-    table: Table, type: JoinType, on: Column<*>, with: Column<*>, constraint: (() -> Op<Boolean>)? = null
-) = Join(this, table, type, on, with, constraint)
+    table: Table, type: JoinType, on: Column<*>, with: Column<*>, leftColumns: Boolean = true, rightColumns: Boolean = true, constraint: (() -> Op<Boolean>)? = null
+) = Join(this, table, type, on, with, leftColumns, rightColumns, constraint)
 
 fun Table.innerJoin(
-    table: Table, on: Column<*>, with: Column<*>, constraint: (() -> Op<Boolean>)? = null
-) = Join (this, table, JoinType.INNER, on, with, constraint)
+    table: Table, on: Column<*>, with: Column<*>, leftColumns: Boolean = true, rightColumns: Boolean = true, constraint: (() -> Op<Boolean>)? = null
+) = Join(this, table, JoinType.INNER, on, with, leftColumns, rightColumns, constraint)
 
 fun Table.leftJoin(
-    table: Table, on: Column<*>, with: Column<*>, constraint: (() -> Op<Boolean>)? = null
-) = Join(this, table, JoinType.LEFT, on, with, constraint)
+    table: Table, on: Column<*>, with: Column<*>, leftColumns: Boolean = true, rightColumns: Boolean = true, constraint: (() -> Op<Boolean>)? = null
+) = Join(this, table, JoinType.LEFT, on, with, leftColumns, rightColumns, constraint)
 
-class Join(val table: Table) : ColumnSet {
-    constructor(lhs: Table, rhs: Table, type: JoinType = JoinType.INNER, on: Column<*>, with: Column<*>, constraint: (() -> Op<Boolean>)? = null) : this(lhs) {
-        parts.addAll(join(rhs, type, on, with, constraint).parts)
+class Join(val table: Table, columns: Boolean = false) : ColumnSet {
+    val parts: ArrayList<JoinPart> = ArrayList()
+    override val columns: ArrayList<Column<*>> = ArrayList()
+
+    init {
+        if(columns) {
+            this.columns.addAll(table.columns)
+        }
     }
 
-    val parts: ArrayList<JoinPart> = ArrayList()
+    constructor(
+        lhs: Table, rhs: Table, type: JoinType = JoinType.INNER, on: Column<*>, with: Column<*>,
+        leftColumns: Boolean = true, rightColumns: Boolean = false, constraint: (() -> Op<Boolean>)? = null
+    ) : this(lhs, leftColumns) {
+        parts.addAll(join(rhs, type, on, with, rightColumns, constraint).parts)
+    }
 
     fun innerJoin(
-        table: Table, on: Expression, with: Expression, constraint: (() -> Op<Boolean>)? = null
-    ) = join(table, JoinType.INNER, on, with, constraint)
+        table: Table, on: Expression, with: Expression,
+        columns: Boolean = true, constraint: (() -> Op<Boolean>)? = null
+    ) = join(table, JoinType.INNER, on, with, columns, constraint)
 
     fun leftJoin(
-        table: Table, on: Expression, with: Expression, constraint: (() -> Op<Boolean>)? = null
-    ) = join(table, JoinType.LEFT, on, with, constraint)
+        table: Table, on: Expression, with: Expression,
+        columns: Boolean = true, constraint: (() -> Op<Boolean>)? = null
+    ) = join(table, JoinType.LEFT, on, with, columns, constraint)
 
-    fun join(rhs: Table, type: JoinType, on: Expression, other: Expression, constraint: (() -> Op<Boolean>)? = null): Join {
+    fun join(
+        rhs: Table, type: JoinType, on: Expression, other: Expression,
+        columns: Boolean = true, constraint: (() -> Op<Boolean>)? = null
+    ): Join {
         val newJoin = Join(table)
         newJoin.parts.addAll(parts)
         newJoin.parts.add(JoinPart(type, rhs, on, other, constraint))
+        if(columns) {
+            this.columns.addAll(table.columns)
+        }
         return newJoin
     }
 
@@ -60,15 +78,6 @@ class Join(val table: Table) : ColumnSet {
             }
             builder.append(' ')
         }
-    }
-
-    override val columns: List<Column<*>> get() {
-        val answer = ArrayList<Column<*>>()
-        answer.addAll(table.columns)
-        for(p in parts) {
-            answer.addAll(p.table.columns)
-        }
-        return answer
     }
 }
 
