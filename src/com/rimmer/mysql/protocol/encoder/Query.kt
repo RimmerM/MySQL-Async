@@ -92,6 +92,7 @@ fun encodeBinary(buffer: ByteBuf, types: ByteArray, index: Int, value: Any, code
         is Float -> encodeFloat(buffer, types, index, value)
         is Double -> encodeDouble(buffer, types, index, value)
         is Byte -> encodeByte(buffer, types, index, value)
+        is Enum<*> -> encodeInt(buffer, types, index, value.ordinal)
         is Timestamp -> encodeSqlTimestamp(buffer, types, index, value)
         is java.sql.Date -> encodeSqlDate(buffer, types, index, value)
         is java.sql.Time -> encodeSqlTime(buffer, types, index, value)

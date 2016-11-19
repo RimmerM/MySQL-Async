@@ -207,6 +207,8 @@ fun decodeLong(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): A
         v.toInt()
     } else if(targetType === booleanType) {
         v != 0L
+    } else if(targetType.isEnum) {
+        targetType.enumConstants.getOrNull(v.toInt()) ?: targetType
     } else {
         return codec?.decodeLong(buffer, targetType) ?: throw unknownTarget(targetType)
     }
@@ -221,6 +223,8 @@ fun decodeInt(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
         v.toLong()
     } else if(targetType === booleanType) {
         v != 0
+    } else if(targetType.isEnum) {
+        targetType.enumConstants.getOrNull(v.toInt()) ?: targetType
     } else {
         return codec?.decodeInt(buffer, targetType) ?: throw unknownTarget(targetType)
     }
@@ -237,6 +241,8 @@ fun decodeShort(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): 
         v.toLong()
     } else if(targetType === booleanType) {
         v != 0.toShort()
+    } else if(targetType.isEnum) {
+        targetType.enumConstants.getOrNull(v.toInt()) ?: targetType
     } else {
         return codec?.decodeShort(buffer, targetType) ?: throw unknownTarget(targetType)
     }
@@ -255,8 +261,10 @@ fun decodeByte(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): A
         v.toLong()
     } else if(targetType === shortType) {
         v.toShort()
+    } else if(targetType.isEnum) {
+        targetType.enumConstants.getOrNull(v.toInt()) ?: targetType
     } else {
-        return codec?.decodeByte(buffer, targetType) ?: throw unknownTarget(targetType)
+        codec?.decodeByte(buffer, targetType) ?: throw unknownTarget(targetType)
     }
 }
 

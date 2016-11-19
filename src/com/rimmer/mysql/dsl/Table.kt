@@ -95,6 +95,12 @@ open class Table(name: String? = null): ColumnSet {
         return answer
     }
 
+    inline fun <reified T: Enum<T>> enum(name: String): Column<T> {
+        val answer = Column(this, name, T::class.java)
+        columns.add(answer)
+        return answer
+    }
+
     fun <T:Any> Column<T>.nullable(): Column<T?> {
         val newColumn = Column(table, name, type as Class<T?>, true)
         return replaceColumn(this, newColumn)
