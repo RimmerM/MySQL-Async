@@ -55,8 +55,10 @@ class Join(val table: Table, columns: Boolean = false) : ColumnSet {
         val newJoin = Join(table)
         newJoin.parts.addAll(parts)
         newJoin.parts.add(JoinPart(type, rhs, on, other, constraint))
+        newJoin.columns.addAll(this.columns)
+
         if(columns) {
-            this.columns.addAll(table.columns)
+            newJoin.columns.addAll(rhs.columns)
         }
         return newJoin
     }
