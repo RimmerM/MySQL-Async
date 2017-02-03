@@ -35,7 +35,10 @@ class Join(val table: Table, columns: Boolean = false) : ColumnSet {
         lhs: Table, rhs: Table, type: JoinType = JoinType.INNER, on: Column<*>, with: Column<*>,
         leftColumns: Boolean = true, rightColumns: Boolean = false, constraint: (() -> Op<Boolean>)? = null
     ) : this(lhs, leftColumns) {
-        parts.addAll(join(rhs, type, on, with, rightColumns, constraint).parts)
+        parts.add(JoinPart(type, rhs, on, with, constraint))
+        if(rightColumns) {
+            columns.addAll(rhs.columns)
+        }
     }
 
     fun innerJoin(
