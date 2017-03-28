@@ -110,3 +110,64 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
         return this
     }
 }
+
+class Union(val left: Select, val right: Select): Expression(), Query {
+    val orderBy = ArrayList<Pair<Expression, Boolean>>()
+    var limit: Int? = null
+    var offset: Int? = null
+
+    override fun format(builder: QueryBuilder) = with(builder) {
+        append('(')
+        left.format(builder)
+        append(") UNION (")
+        right.format(builder)
+        append(')')
+
+        if(orderBy.isNotEmpty()) {
+            append(" ORDER BY ")
+            orderBy.sepBy(builder.string, ", ") {
+                it.first.format(this)
+                append(if(it.second) " ASC" else " DESC")
+            }
+        }
+
+        if(limit != null) {
+            append(" LIMIT ")
+            argument(limit!!)
+
+            if(offset != null) {
+                append(" OFFSET ")
+                argument(offset!!)
+            }
+        }
+    }
+
+    override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
+        val builder = QueryBuilder()
+        val fields = left.set.fields.map {it.type}
+        format(builder)
+        builder.run(c, fields, listenerData, f)
+    }
+
+    infix fun orderBy(column: Expression) = orderBy(column, true)
+
+    fun orderBy(column: Expression, ascending: Boolean): Union {
+        orderBy.add(Pair(column, ascending))
+        return this
+    }
+
+    fun orderBy(vararg column: Pair<Expression, Boolean>): Union {
+        orderBy.addAll(column)
+        return this
+    }
+
+    infix fun limit(count: Int): Union {
+        limit = count
+        return this
+    }
+
+    infix fun offset(index: Int): Union {
+        offset = index
+        return this
+    }
+}
