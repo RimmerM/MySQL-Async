@@ -18,4 +18,10 @@ abstract class Expression {
     }
 }
 
+class CustomExpression(val content: String) : Expression() {
+    override fun format(builder: QueryBuilder) {
+        builder.append(content)
+    }
+}
+
 abstract class TypedExpression<T>(val type: Class<T>, val nullable: Boolean) : Expression()
