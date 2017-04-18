@@ -26,10 +26,11 @@ fun FieldSet.selectAll() = Select(this, null)
 fun FieldSet.selectCount(where: Op<Boolean>) = Select(this, where, true)
 fun FieldSet.selectAllCount() = Select(this, null, true)
 
-inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null) = Update(this, where(), limit)
+inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null, ignore: Boolean = false) =
+    Update(this, where(), ignore, limit)
 
-inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null, f: T.(Update) -> Unit): Update {
-    val u = Update(this, where(), limit)
+inline fun <T: Table> T.update(where: T.() -> Op<Boolean>, limit: Int? = null, ignore: Boolean = false, f: T.(Update) -> Unit): Update {
+    val u = Update(this, where(), ignore, limit)
     f(u)
     return u
 }

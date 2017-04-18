@@ -4,7 +4,7 @@ import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 import java.util.*
 
-class Update(val table: Table, val where: Op<Boolean>? = null, val limit: Int? = null): Query {
+class Update(val table: Table, val where: Op<Boolean>? = null, val ignore: Boolean = false, val limit: Int? = null): Query {
     val values = LinkedHashMap<Column<*>, Any?>()
 
     operator fun <T> set(column: Column<T>, value: T) {
@@ -24,6 +24,9 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val limit: Int? =
     override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
         builder.append("UPDATE ")
+        if(ignore) {
+            builder.append("IGNORE ")
+        }
         table.format(builder)
         builder.append(" SET ")
         sepBy(values.iterator(), builder.string, ", ") {
