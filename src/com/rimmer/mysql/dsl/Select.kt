@@ -111,7 +111,7 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
     }
 }
 
-class Union(val left: Select, val right: Select, val all: Boolean): Expression(), Query {
+class Union(val left: Select, val right: Expression, val all: Boolean): Expression(), Query {
     val orderBy = ArrayList<Pair<Expression, Boolean>>()
     var limit: Int? = null
     var offset: Int? = null
@@ -172,5 +172,5 @@ class Union(val left: Select, val right: Select, val all: Boolean): Expression()
     }
 }
 
-fun union(left: Select, right: Select) = Union(left, right, false)
-fun unionAll(left: Select, right: Select) = Union(left, right, true)
+fun union(left: Select, right: Expression) = Union(left, right, false)
+fun unionAll(left: Select, right: Expression) = Union(left, right, true)
