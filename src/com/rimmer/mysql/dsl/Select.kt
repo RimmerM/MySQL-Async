@@ -122,7 +122,7 @@ class Union(val left: Select, val right: Expression, val all: Boolean): Expressi
         append('(')
         left.format(builder)
         append(if(all) ") UNION ALL " else ") UNION ")
-        if(!chain) append(')')
+        if(!chain) append('(')
         right.format(builder)
         if(!chain) append(')')
 
