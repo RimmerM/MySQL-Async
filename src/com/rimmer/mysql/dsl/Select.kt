@@ -117,11 +117,14 @@ class Union(val left: Select, val right: Expression, val all: Boolean): Expressi
     var offset: Int? = null
 
     override fun format(builder: QueryBuilder) = with(builder) {
+        val chain = right is Union
+
         append('(')
         left.format(builder)
-        append(if(all) ") UNION ALL (" else ") UNION (")
+        append(if(all) ") UNION ALL " else ") UNION ")
+        if(!chain) append(')')
         right.format(builder)
-        append(')')
+        if(!chain) append(')')
 
         if(orderBy.isNotEmpty()) {
             append(" ORDER BY ")
