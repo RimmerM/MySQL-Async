@@ -193,6 +193,7 @@ fun decodeBit(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
         if(targetType === intType) return result.toInt()
         if(targetType === shortType) return result.toShort()
         if(targetType === byteType) return result.toByte()
+        if(targetType === booleanType) return result != 0L
 
         return codec?.decodeBit(buffer, targetType) ?: throw unknownTarget(targetType)
     }
