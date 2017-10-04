@@ -8,9 +8,6 @@ class Insert(val table: Table, val isIgnore: Boolean = false, val isReplace: Boo
     val values = LinkedHashMap<Column<*>, Any?>()
 
     operator fun <T> set(column: Column<T>, value: T) {
-        if(values.containsKey(column)) {
-            throw IllegalArgumentException("$column has already been set")
-        }
         values.put(column, value)
     }
 

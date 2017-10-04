@@ -8,16 +8,10 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val ignore: Boole
     val values = LinkedHashMap<Column<*>, Any?>()
 
     operator fun <T> set(column: Column<T>, value: T) {
-        if(values.containsKey(column)) {
-            throw IllegalArgumentException("$column has already been set")
-        }
         values.put(column, value)
     }
 
     operator fun <T> set(column: Column<T>, value: Expression) {
-        if(values.containsKey(column)) {
-            throw IllegalArgumentException("$column has already been set")
-        }
         values.put(column, value)
     }
 
