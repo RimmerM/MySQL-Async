@@ -32,7 +32,7 @@ fun makeToken(password: String, secret: ByteArray): ByteArray {
     val token = sha.digest()
 
     // Xor each byte in the token with the password hash.
-    for(i in 0..token.size - 1) {
+    for(i in 0 until token.size) {
         token[i] = (token[i].toInt() xor pass1[i].toInt()).toByte()
     }
 

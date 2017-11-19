@@ -60,7 +60,7 @@ class IsNotNullOp(val lhs: Expression): Op<Boolean>(booleanType, false) {
     }
 }
 
-class InListOp<T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(booleanType, false) {
+class InListOp<out T: Any>(val pivot: Expression, val list: Iterable<T>, val inList: Boolean = true): Op<Boolean>(booleanType, false) {
     override fun format(builder: QueryBuilder) {
         val iterator = list.iterator()
         val hasFirst = iterator.hasNext()

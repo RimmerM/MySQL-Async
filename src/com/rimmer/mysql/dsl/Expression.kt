@@ -3,13 +3,8 @@ package com.rimmer.mysql.dsl
 abstract class Expression {
     abstract fun format(builder: QueryBuilder)
 
-    override fun equals(other: Any?): Boolean {
-        return (other as? Expression)?.toString() == toString()
-    }
-
-    override fun hashCode(): Int {
-        return toString().hashCode()
-    }
+    override fun equals(other: Any?) = (other as? Expression)?.toString() == toString()
+    override fun hashCode() = toString().hashCode()
 
     override fun toString(): String {
         val b = QueryBuilder()

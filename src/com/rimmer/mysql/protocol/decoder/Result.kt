@@ -185,7 +185,7 @@ fun decodeBit(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
         return bytes
     } else {
         var result = 0L
-        for(i in 0..length - 1) {
+        for(i in 0 until length) {
             result = result or (buffer.readByte().toLong() shl (8*i))
         }
 
@@ -225,7 +225,7 @@ fun decodeInt(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): An
     } else if(targetType === booleanType) {
         v != 0
     } else if(targetType.isEnum) {
-        targetType.enumConstants.getOrNull(v.toInt()) ?: targetType
+        targetType.enumConstants.getOrNull(v) ?: targetType
     } else {
         return codec?.decodeInt(buffer, targetType) ?: throw unknownTarget(targetType)
     }

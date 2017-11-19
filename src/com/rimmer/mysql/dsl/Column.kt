@@ -9,13 +9,8 @@ open class Column<T>(val table: Table, val name: String, type: Class<T>, nullabl
         } ?: false
     }
 
-    override fun hashCode(): Int {
-        return table.hashCode() * 31 + name.hashCode()
-    }
-
-    override fun toString(): String {
-        return "$table.$name"
-    }
+    override fun hashCode() = table.hashCode() * 31 + name.hashCode()
+    override fun toString() = "$table.$name"
 
     override fun format(builder: QueryBuilder) {
         builder.append(quotedName)

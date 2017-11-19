@@ -51,7 +51,7 @@ fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>, codec: CodecExten
     buffer.writerIndex(bitmapOffset + bitmapSize + 1 + typesSize)
 
     // Fill each array with data.
-    for(i in 0..count-1) {
+    for(i in 0 until count) {
         val value = values[i]
         if(value === null) {
             bitmap[i / 8] = (bitmap[i / 8].toInt() or (1 shl (i and 7))).toByte()
@@ -69,7 +69,7 @@ fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>, codec: CodecExten
 
     // Write the new-params-bound-flag depending on if we have any parameters.
     // An empty parameter set will re-use the previous set if the statement contains parameters.
-    buffer.writeByte(if(values.size > 0) 1 else 0)
+    buffer.writeByte(if(values.isNotEmpty()) 1 else 0)
 
     // Write the type map to the buffer. The parameter values are already located after this.
     buffer.writeBytes(types)

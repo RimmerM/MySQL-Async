@@ -4,7 +4,7 @@ import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
 import java.util.*
 
-class QueryBuilder() {
+class QueryBuilder {
     val string = StringBuilder()
     val args = ArrayList<Any?>()
 
