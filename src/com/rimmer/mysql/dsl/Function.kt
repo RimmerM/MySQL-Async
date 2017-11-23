@@ -1,5 +1,6 @@
 package com.rimmer.mysql.dsl
 
+import com.rimmer.mysql.protocol.decoder.dateTimeType
 import com.rimmer.mysql.protocol.decoder.floatType
 import com.rimmer.mysql.protocol.decoder.longType
 import org.joda.time.DateTime
@@ -127,5 +128,13 @@ class Now: Function<DateTime>(DateTime::class.java) {
 class Rand: Function<Float>(floatType) {
     override fun format(builder: QueryBuilder) {
         builder.append("RAND()")
+    }
+}
+
+class FromUnixTime(val pivot: Expression): Function<DateTime>(dateTimeType) {
+    override fun format(builder: QueryBuilder) {
+        builder.append("FROM_UNIXTIME(")
+        pivot.format(builder)
+        builder.append(")")
     }
 }
