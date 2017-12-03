@@ -19,7 +19,7 @@ class QueryBuilder {
     }
 
     fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit) {
-        c.query(string.toString(), args, targetTypes, listenerData, f)
+        c.query(string.toString(), args, targetTypes, listenerData, false, f)
     }
 
     override fun toString() = string.toString()

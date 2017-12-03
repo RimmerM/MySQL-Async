@@ -19,9 +19,12 @@ interface Connection {
      * @param values The parameters to send to the query.
      * @param targetTypes The types you want the query to return. If not set, the driver decides what types to return.
      * @param data Data for the query listener that will be associated with the query.
+     * @param textQuery If set, the query will be sent as text instead of through a prepared statement.
+     * Some query types must be sent as text.
+     * Query parameters are not supported for text queries, and the values list will be ignored.
      * @return A query result object.
      */
-    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any? = null, f: (QueryResult?, Throwable?) -> Unit)
+    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any? = null, textQuery: Boolean = false, f: (QueryResult?, Throwable?) -> Unit)
 
     /** Closes this connection. */
     fun disconnect()
@@ -47,7 +50,9 @@ interface QueryListener {
     fun onQuery(data: Any?, query: String, result: QueryResult?, error: Throwable?)
 }
 
-/** A codec helper that can be provided to support encoding and decoding custom types. */
+/**
+ * A codec helper that can be provided to support encoding and decoding custom types.
+ */
 interface CodecExtender {
     fun encode(buffer: ByteBuf, types: ByteArray, index: Int, value: Any) {}
     fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
@@ -60,6 +65,9 @@ interface CodecExtender {
     fun decodeLong(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
     fun decodeString(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
     fun decodeBit(buffer: ByteBuf, targetType: Class<*>?): Any = throw unknownTarget(targetType)
+
+    // Called when decoding from the text protocol.
+    fun decodeText(bytes: ByteArray, targetType: Class<*>?): Any = throw unknownTarget(targetType)
 }
 
 /** Contains the result data for a single row. */

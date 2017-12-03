@@ -31,6 +31,7 @@ class ProtocolHandler(
     private var hasHandshake = false
     private var insideQuery = false
     private var insidePrepare = false
+    private var isTextQuery = false
 
     /** Used to handle prepared statement param definitions. */
     private var processingParams = false
@@ -104,10 +105,16 @@ class ProtocolHandler(
     override val idleTime: Long
         get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
 
-    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any?, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any?, textQuery: Boolean, f: (QueryResult?, Throwable?) -> Unit) {
         queryCallback = f
         listenerData = data
         queryString = query
+
+        // If this is a text query, we don't need the statement cache.
+        if(textQuery) {
+            textQuery(query, targetTypes)
+            return
+        }
 
         // Check if the statement was already in cache.
         val statement = statementCache[query]
@@ -171,6 +178,17 @@ class ProtocolHandler(
         currentContext!!.writeAndFlush(writeQuery(statement.statementId, values, codec), currentContext!!.voidPromise())
     }
 
+    /** Performs a query with a string. */
+    private fun textQuery(query: String, targetTypes: List<Class<*>>?) {
+        assertReadyForQuery()
+
+        queryStart = System.nanoTime()
+        requestedTypes = targetTypes
+        insideQuery = true
+        isTextQuery = true
+        currentContext!!.writeAndFlush(writeTextQuery(query), currentContext!!.voidPromise())
+    }
+
     /**
      * Called when the client receives a handshake packet after connecting to the server.
      * This doesn't mean that we have a successful connection - we have to authenticate first.
@@ -226,8 +244,15 @@ class ProtocolHandler(
      */
     fun onRow(packet: ByteBuf) {
         val row = Array<Any?>(totalColumnCount) {null}
-        readResultRow(packet, totalColumnCount, columnTypes, requestedTypes, codec) {
-            column, value -> row[column] = value
+
+        if(isTextQuery) {
+            readTextResultRow(packet, totalColumnCount, columnTypes, requestedTypes, codec) { column, value ->
+                row[column] = value
+            }
+        } else {
+            readResultRow(packet, totalColumnCount, columnTypes, requestedTypes, codec) { column, value ->
+                row[column] = value
+            }
         }
 
         val index = result.size
@@ -553,6 +578,7 @@ class ProtocolHandler(
     private fun clearState() {
         insideQuery = false
         insidePrepare = false
+        isTextQuery = false
         processingParams = false
         processingColumns = false
         totalColumnCount = 0

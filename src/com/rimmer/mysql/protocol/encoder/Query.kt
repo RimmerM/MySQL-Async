@@ -35,6 +35,15 @@ fun writeQuery(statementId: Int, parameters: List<Any?>, codec: CodecExtender?):
     return buffer
 }
 
+fun writeTextQuery(query: String): ByteBuf {
+    val encodedQuery = query.toByteArray()
+    val buffer = packetBuffer(5 + encodedQuery.size)
+    buffer.writeByte(CommandType.QUERY)
+    buffer.writeBytes(encodedQuery)
+    writePacketLength(buffer)
+    return buffer
+}
+
 fun writeBinaryParameters(buffer: ByteBuf, values: List<Any?>, codec: CodecExtender?) {
     // Create a bitmap indicating which parameter values are null.
     val count = values.size
