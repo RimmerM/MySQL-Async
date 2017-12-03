@@ -21,6 +21,8 @@ val doubleType = Double::class.javaObjectType
 val dateType = Date::class.java
 val dateTimeType = DateTime::class.java
 val stringType = String::class.java
+val byteArrayType = ByteArray::class.java
+val byteBufType = ByteBuf::class.java
 
 fun unknownTarget(targetType: Class<*>?) = SqlException(0, "", "Unknown target type $targetType")
 
@@ -98,8 +100,6 @@ inline fun readResultRow(
 }
 
 fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?, codec: CodecExtender?): Any? = when(type) {
-    // Ordered by likely usage frequency.
-    // If most calls do only a few comparisons this is a lot faster than a map structure.
     Type.DECIMAL -> decodeDecimal(buffer, targetType, codec)
     Type.TINY -> decodeByte(buffer, targetType, codec)
     Type.SHORT -> decodeShort(buffer, targetType, codec)
@@ -133,12 +133,12 @@ fun decodeBinary(buffer: ByteBuf, type: Int, targetType: Class<*>?, codec: Codec
 fun decodeString(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     if(targetType === null || targetType === stringType) {
         return buffer.readLengthEncodedString()
-    } else if(targetType === ByteArray::class.java) {
+    } else if(targetType === byteArrayType) {
         val length = buffer.readLengthEncoded().toInt()
         val bytes = ByteArray(length)
         buffer.readBytes(bytes)
         return bytes
-    } else if(targetType === ByteBuf::class.java) {
+    } else if(targetType === byteBufType) {
         val length = buffer.readLengthEncoded().toInt()
         return buffer.readBytes(length)
     } else {
@@ -179,7 +179,7 @@ fun decodeDecimal(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?)
 
 fun decodeBit(buffer: ByteBuf, targetType: Class<*>?, codec: CodecExtender?): Any {
     val length = buffer.readLengthEncoded().toInt()
-    if(targetType === null || targetType === ByteArray::class.java) {
+    if(targetType === null || targetType === byteArrayType) {
         val bytes = ByteArray(length)
         buffer.readBytes(bytes)
         return bytes
