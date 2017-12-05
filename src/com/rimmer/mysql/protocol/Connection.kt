@@ -22,9 +22,20 @@ interface Connection {
      * @param textQuery If set, the query will be sent as text instead of through a prepared statement.
      * Some query types must be sent as text.
      * Query parameters are not supported for text queries, and the values list will be ignored.
+     * @param chunkSize The number of rows to accumulate before calling `onResult`. Ignored if no result handler is provided.
+     * @param onResult If set, this will receive incremental result sets while data is received. The final result will be empty.
      * @return A query result object.
      */
-    fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any? = null, textQuery: Boolean = false, f: (QueryResult?, Throwable?) -> Unit)
+    fun query(
+        query: String,
+        values: List<Any?>,
+        targetTypes: List<Class<*>>?,
+        data: Any? = null,
+        textQuery: Boolean = false,
+        chunkSize: Int = 1000,
+        onResult: ((ResultSet) -> Unit)? = null,
+        f: (QueryResult?, Throwable?) -> Unit
+    )
 
     /** Closes this connection. */
     fun disconnect()

@@ -26,6 +26,7 @@ class ProtocolHandler(
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
     private var queryCallback: ((QueryResult?, Throwable?) -> Unit)? = null
+    private var resultCallback: ((ResultSet) -> Unit)? = null
     private var prepareCallback: ((Statement?, Throwable?) -> Unit)? = null
 
     private var hasHandshake = false
@@ -85,6 +86,9 @@ class ProtocolHandler(
     /** The query string currently being executed. */
     private var queryString = ""
 
+    /** The maximum number of results to store before calling `resultCallback`. */
+    private var resultChunkSize = 0
+
     /** Contains cached prepared statements. */
     private val statementCache = HashMap<String, Statement>()
     private var lastStatementDebug = 0L
@@ -105,8 +109,19 @@ class ProtocolHandler(
     override val idleTime: Long
         get() = if(queryStart > 0) 0L else System.nanoTime() - queryEnd
 
-    override fun query(query: String, values: List<Any?>, targetTypes: List<Class<*>>?, data: Any?, textQuery: Boolean, f: (QueryResult?, Throwable?) -> Unit) {
+    override fun query(
+        query: String,
+        values: List<Any?>,
+        targetTypes: List<Class<*>>?,
+        data: Any?,
+        textQuery: Boolean,
+        chunkSize: Int,
+        onResult: ((ResultSet) -> Unit)?,
+        f: (QueryResult?, Throwable?) -> Unit
+    ) {
         queryCallback = f
+        resultCallback = onResult
+        resultChunkSize = chunkSize
         listenerData = data
         queryString = query
 
@@ -242,7 +257,7 @@ class ProtocolHandler(
      * Called when we receive a result row.
      * The row is decoded and added to the result we are building.
      */
-    fun onRow(packet: ByteBuf) {
+    private fun onRow(packet: ByteBuf) {
         val row = Array<Any?>(totalColumnCount) {null}
 
         if(isTextQuery) {
@@ -261,6 +276,14 @@ class ProtocolHandler(
             override fun get(index: Int) = row[index]
             override fun iterator() = row.iterator()
         })
+
+        val resultCallback = this.resultCallback
+        if(resultCallback != null && index + 1 >= resultChunkSize) {
+            val names = Array(totalColumnCount) { columnNames[it] }
+            val values = Array(result.size) { result[it] }
+            resultCallback(ResultSet(values, names))
+            result.clear()
+        }
     }
 
     /**
@@ -402,11 +425,19 @@ class ProtocolHandler(
 
     /** Finishes a query-command with buffered results and clears state. */
     private fun succeedQuery(affectedRows: Long, lastInsertId: Long, message: String) {
-        val queryResult = if(totalColumnCount > 0) {
+        val resultSet = if(totalColumnCount > 0) {
             val names = Array(totalColumnCount) { columnNames[it] }
             val values = Array(result.size) { result[it] }
             ResultSet(values, names)
         } else null
+
+        val resultCallback = this.resultCallback
+        val queryResult = if(resultCallback != null && resultSet != null && resultSet.data.isNotEmpty()) {
+            resultCallback(resultSet)
+            null
+        } else {
+            resultSet
+        }
 
         val result = QueryResult(affectedRows, lastInsertId, message, System.nanoTime() - queryStart, queryResult)
 
@@ -420,6 +451,7 @@ class ProtocolHandler(
         // The callback may change our state before returning, which is why the state needs to be final here.
         val f = queryCallback
         queryCallback = null
+        resultCallback = null
         val data = listenerData
         listenerData = null
         val string = queryString
