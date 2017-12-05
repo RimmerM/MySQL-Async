@@ -3,17 +3,32 @@ package com.rimmer.mysql.dsl
 import com.rimmer.mysql.pool.ConnectionPool
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
+import com.rimmer.mysql.protocol.ResultSet
 import com.rimmer.mysql.protocol.decoder.intType
 
 interface Query {
     /** Runs this query on the provided connection. */
     fun run(c: Connection, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit)
 
+    fun run(c: Connection, listenerData: Any? = null, chunkSize: Int = 1000, onResult: ((ResultSet) -> Unit)?, f: (QueryResult?, Throwable?) -> Unit) {
+        run(c, listenerData, f)
+    }
+
     /** Fetches a connection from the pool and runs this query. */
     fun run(pool: ConnectionPool, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit) {
         pool.get { c, e ->
             if(c == null) f(null, e)
             else run(c, listenerData) { r, e ->
+                c.disconnect()
+                f(r, e)
+            }
+        }
+    }
+
+    fun run(pool: ConnectionPool, listenerData: Any? = null, chunkSize: Int = 1000, onResult: ((ResultSet) -> Unit)?, f: (QueryResult?, Throwable?) -> Unit) {
+        pool.get { c, e ->
+            if(c == null) f(null, e)
+            else run(c, listenerData, chunkSize, onResult) { r, e ->
                 c.disconnect()
                 f(r, e)
             }

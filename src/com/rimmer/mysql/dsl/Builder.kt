@@ -2,6 +2,7 @@ package com.rimmer.mysql.dsl
 
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
+import com.rimmer.mysql.protocol.ResultSet
 import java.util.*
 
 class QueryBuilder {
@@ -20,6 +21,10 @@ class QueryBuilder {
 
     fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit) {
         c.query(string.toString(), args, targetTypes, listenerData, f = f)
+    }
+
+    fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, chunkSize: Int = 1000, onResult: (ResultSet) -> Unit, f: (QueryResult?, Throwable?) -> Unit) {
+        c.query(string.toString(), args, targetTypes, listenerData, false, chunkSize, onResult, f)
     }
 
     override fun toString() = string.toString()

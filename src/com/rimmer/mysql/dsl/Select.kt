@@ -2,6 +2,7 @@ package com.rimmer.mysql.dsl
 
 import com.rimmer.mysql.protocol.Connection
 import com.rimmer.mysql.protocol.QueryResult
+import com.rimmer.mysql.protocol.ResultSet
 import com.rimmer.mysql.protocol.decoder.intType
 import java.util.*
 
@@ -67,6 +68,10 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
     }
 
     override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
+        run(c, listenerData, 0, null, f)
+    }
+
+    override fun run(c: Connection, listenerData: Any?, chunkSize: Int, onResult: ((ResultSet) -> Unit)?, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
         val fields = if(isCount) listOf(intType) else set.fields.map {it.type}
         format(builder)
@@ -146,6 +151,10 @@ class Union(val left: Select, val right: Expression, val all: Boolean): Expressi
     }
 
     override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
+        run(c, listenerData, 0, null, f)
+    }
+
+    override fun run(c: Connection, listenerData: Any?, chunkSize: Int, onResult: ((ResultSet) -> Unit)?, f: (QueryResult?, Throwable?) -> Unit) {
         val builder = QueryBuilder()
         val fields = left.set.fields.map {it.type}
         format(builder)
