@@ -10,14 +10,14 @@ import org.joda.time.chrono.ISOChronology
 import java.math.BigDecimal
 import java.util.*
 
-val booleanType = Boolean::class.javaObjectType
-val byteType = Byte::class.javaObjectType
-val charType = Char::class.javaObjectType
-val shortType = Short::class.javaObjectType
-val intType = Int::class.javaObjectType
-val longType = Long::class.javaObjectType
-val floatType = Float::class.javaObjectType
-val doubleType = Double::class.javaObjectType
+val booleanType = java.lang.Boolean::class.java as Class<Boolean>
+val byteType = java.lang.Byte::class.java as Class<Byte>
+val charType = java.lang.Character::class.java as Class<Char>
+val shortType = java.lang.Short::class.java as Class<Short>
+val intType = java.lang.Integer::class.java as Class<Int>
+val longType = java.lang.Long::class.java as Class<Long>
+val floatType = java.lang.Float::class.java as Class<Float>
+val doubleType = java.lang.Double::class.java as Class<Double>
 val dateType = Date::class.java
 val dateTimeType = DateTime::class.java
 val stringType = String::class.java
