@@ -44,6 +44,6 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val ignore: Boole
             builder.append(limit)
         }
 
-        builder.run(c, null, listenerData, f)
+        builder.run(c, null, listenerData, 0, null, f)
     }
 }

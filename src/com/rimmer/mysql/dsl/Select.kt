@@ -75,7 +75,7 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
         val builder = QueryBuilder()
         val fields = if(isCount) listOf(intType) else set.fields.map {it.type}
         format(builder)
-        builder.run(c, fields, listenerData, f)
+        builder.run(c, fields, listenerData, chunkSize, onResult, f)
     }
 
     fun forUpdate(): Select {
@@ -158,7 +158,7 @@ class Union(val left: Select, val right: Expression, val all: Boolean): Expressi
         val builder = QueryBuilder()
         val fields = left.set.fields.map {it.type}
         format(builder)
-        builder.run(c, fields, listenerData, f)
+        builder.run(c, fields, listenerData, chunkSize, onResult, f)
     }
 
     infix fun orderBy(column: Expression) = orderBy(column, true)

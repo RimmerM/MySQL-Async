@@ -19,11 +19,7 @@ class QueryBuilder {
         string.append('?')
     }
 
-    fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, f: (QueryResult?, Throwable?) -> Unit) {
-        c.query(string.toString(), args, targetTypes, listenerData, f = f)
-    }
-
-    fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, chunkSize: Int = 1000, onResult: (ResultSet) -> Unit, f: (QueryResult?, Throwable?) -> Unit) {
+    fun run(c: Connection, targetTypes: List<Class<*>>? = null, listenerData: Any? = null, chunkSize: Int, onResult: ((ResultSet) -> Unit)?, f: (QueryResult?, Throwable?) -> Unit) {
         c.query(string.toString(), args, targetTypes, listenerData, false, chunkSize, onResult, f)
     }
 
