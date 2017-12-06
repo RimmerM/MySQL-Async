@@ -19,10 +19,10 @@ class ProtocolHandler(
     val user: String,
     val password: String,
     val database: String,
-    var connectCallback: ((Connection?, Throwable?) -> Unit)?,
+    private var connectCallback: ((Connection?, Throwable?) -> Unit)?,
     val listener: QueryListener?,
-    val codec: CodecExtender?,
-    val debugStatementAbove: Int = 0
+    private val codec: CodecExtender?,
+    private val debugStatementAbove: Int = 0
 ): ChannelInboundHandlerAdapter(), Connection {
     private var currentContext: ChannelHandlerContext? = null
     private var queryCallback: ((QueryResult?, Throwable?) -> Unit)? = null
@@ -231,7 +231,10 @@ class ProtocolHandler(
         affectedRows, lastInsertId, serverStatus, warnings, message ->
 
         hasHandshake = true
-        connectCallback?.invoke(this, null)
+        val callback = connectCallback
+        connectCallback = null
+
+        callback?.invoke(this, null)
     }
 
     /**
@@ -511,6 +514,7 @@ class ProtocolHandler(
             connectCallback = null
         } else {
             connectCallback?.invoke(null, exception)
+            connectCallback = null
         }
     }
 
