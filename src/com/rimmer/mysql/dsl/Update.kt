@@ -16,6 +16,11 @@ class Update(val table: Table, val where: Op<Boolean>? = null, val ignore: Boole
     }
 
     override fun run(c: Connection, listenerData: Any?, f: (QueryResult?, Throwable?) -> Unit) {
+        if(values.isEmpty()) {
+            f(QueryResult(0, 0, "", 0, null), null)
+            return
+        }
+
         val builder = QueryBuilder()
         builder.append("UPDATE ")
         if(ignore) {
