@@ -5,10 +5,12 @@ import com.rimmer.mysql.protocol.QueryResult
 import com.rimmer.mysql.protocol.ResultSet
 import com.rimmer.mysql.protocol.decoder.intType
 import java.util.*
+import kotlin.collections.ArrayList
 
 class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = false): Expression(), Query {
-    val groupedBy = ArrayList<Expression>()
-    val orderBy = ArrayList<Pair<Expression, Boolean>>()
+    var groupedBy: ArrayList<Expression>? = null
+    var orderBy: ArrayList<Pair<Expression, Boolean>>? = null
+    var forcedIndexes: ArrayList<String>? = null
 
     var having: Op<Boolean>? = null
     var limit: Int? = null
@@ -29,12 +31,24 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
         append(" FROM ")
         set.source.format(this)
 
+        val forcedIndexes = forcedIndexes
+        if(forcedIndexes != null && forcedIndexes.isNotEmpty()) {
+            append(" FORCE INDEX (")
+            forcedIndexes.sepBy(string, ", ") {
+                append('`')
+                append(it)
+                append('`')
+            }
+            append(')')
+        }
+
         if(where != null) {
             append(" WHERE ")
             where.format(this)
         }
 
-        if(groupedBy.isNotEmpty()) {
+        val groupedBy = groupedBy
+        if(groupedBy != null && groupedBy.isNotEmpty()) {
             append(" GROUP BY ")
             groupedBy.sepBy(string, ", ") { it.format(this) }
         }
@@ -44,7 +58,8 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
             having!!.format(builder)
         }
 
-        if(orderBy.isNotEmpty()) {
+        val orderBy = orderBy
+        if(orderBy != null && orderBy.isNotEmpty()) {
             append(" ORDER BY ")
             orderBy.sepBy(builder.string, ", ") {
                 it.first.format(this)
@@ -84,24 +99,34 @@ class Select(val set: FieldSet, val where: Op<Boolean>?, val isCount: Boolean = 
     }
 
     infix fun groupBy(column: Expression): Select {
-        groupedBy.add(column)
+        if(groupedBy == null) groupedBy = ArrayList()
+        groupedBy!!.add(column)
         return this
     }
 
     fun groupBy(vararg columns: Expression): Select {
-        groupedBy.addAll(columns)
+        if(groupedBy == null) groupedBy = ArrayList()
+        groupedBy!!.addAll(columns)
         return this
     }
 
     infix fun orderBy(column: Expression) = orderBy(column, true)
 
     fun orderBy(column: Expression, ascending: Boolean): Select {
-        orderBy.add(Pair(column, ascending))
+        if(orderBy == null) orderBy = ArrayList()
+        orderBy!!.add(Pair(column, ascending))
         return this
     }
 
     fun orderBy(vararg column: Pair<Expression, Boolean>): Select {
-        orderBy.addAll(column)
+        if(orderBy == null) orderBy = ArrayList()
+        orderBy!!.addAll(column)
+        return this
+    }
+
+    fun forceIndex(vararg index: String): Select {
+        if(forcedIndexes == null) forcedIndexes = ArrayList()
+        forcedIndexes!!.addAll(index)
         return this
     }
 
