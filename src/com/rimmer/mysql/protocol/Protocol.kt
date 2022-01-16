@@ -215,7 +215,7 @@ class ProtocolHandler(
         serverCaps = capabilities
         currentContext!!.writeAndFlush(writeAuthentication(
             maxPacketSize = 0x00ffffff,
-            charset = CharSet.UTF8,
+            charset = CharSet.UTF8MB4,
             user = user,
             password = password,
             seed = authSecret,
