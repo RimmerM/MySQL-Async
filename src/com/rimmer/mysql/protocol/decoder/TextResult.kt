@@ -28,10 +28,8 @@ inline fun readTextResultRow(
 }
 
 fun decodeText(buffer: ByteBuf, type: Int, targetType: Class<*>?, codec: CodecExtender?): Any? {
-    val length = buffer.readLengthEncoded().toInt()
-    if(length == 0xfb) return null
-
-    val bytes = ByteArray(length)
+    val length = buffer.readNullableLengthEncoded() ?: return null
+    val bytes = ByteArray(length.toInt())
     buffer.readBytes(bytes)
 
     if(targetType === stringType) return String(bytes)

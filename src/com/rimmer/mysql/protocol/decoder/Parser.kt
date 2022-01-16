@@ -7,6 +7,18 @@ import java.nio.charset.Charset
 fun ByteBuf.readLengthEncoded(): Long {
     val flag = readUnsignedByte()
     return when(flag) {
+        0xfb.toShort() -> 0L
+        0xfc.toShort() -> readUnsignedShortLE().toLong()
+        0xfd.toShort() -> readUnsignedMediumLE().toLong()
+        0xfe.toShort() -> readLongLE()
+        else -> flag.toLong()
+    }
+}
+
+fun ByteBuf.readNullableLengthEncoded(): Long? {
+    val flag = readUnsignedByte()
+    return when(flag) {
+        0xfb.toShort() -> null
         0xfc.toShort() -> readUnsignedShortLE().toLong()
         0xfd.toShort() -> readUnsignedMediumLE().toLong()
         0xfe.toShort() -> readLongLE()
